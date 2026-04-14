@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Daves Live Tourney</title>
     <style>
-        /* Styles derived from original tournament structure */
         :root { --p: #2563eb; --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --danger: #ef4444; --success: #16a34a; --seed: #fef9c3; }
         body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 0; margin: 0; padding-bottom: 80px; }
         nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; display: flex; border-top: 1px solid #e2e8f0; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
@@ -29,7 +28,7 @@
         td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
         .is-seeded { background: var(--seed); }
 
-        /* Admin UI */
+        /* Admin Interface */
         #admin-lock-btn { position: fixed; top: 10px; right: 10px; z-index: 2000; background: #334155; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 0.7rem; cursor: pointer; }
         body:not(.is-admin) input, body:not(.is-admin) select, body:not(.is-admin) button:not(.tab-btn):not(#admin-lock-btn) { 
             pointer-events: none; opacity: 0.6; filter: grayscale(1);
@@ -61,15 +60,15 @@
     </div>
 
     <div id="tab-groups" class="tab-content hidden"><div id="groups-container"></div></div>
-
     <div id="tab-standings" class="tab-content hidden"><div class="card"><h2>Live Leaderboard</h2><div id="standings-tables"></div></div></div>
-
     <div id="tab-brackets" class="tab-content hidden">
         <div class="card">
             <h2>Playoffs</h2>
             <button onclick="generateBrackets()" style="width:100%; padding:10px; background:var(--success); color:white; border:none; border-radius:8px; margin-bottom:15px">Generate Finals Bracket</button>
+            <div style="background:var(--p); color:white; padding:5px 10px; border-radius:4px; font-size:0.8rem; font-weight:bold">🏆 CHAMPIONSHIP</div>
             <div id="top-bracket" class="bracket-scroll"></div>
             <button onclick="advance('top')" style="width:100%; padding:10px; background:var(--p); color:white; border:none; border-radius:8px; margin:10px 0">Advance Winners</button>
+            <div style="background:#64748b; color:white; padding:5px 10px; border-radius:4px; font-size:0.8rem; font-weight:bold; margin-top:20px">🥈 CONSOLATION</div>
             <div id="bottom-bracket" class="bracket-scroll"></div>
             <button onclick="advance('bottom')" style="width:100%; padding:10px; background:#64748b; color:white; border:none; border-radius:8px; margin:10px 0">Advance Winners</button>
             <button onclick="resetAll()" style="width:100%; background:none; color:var(--danger); border:1px solid var(--danger); border-radius:8px; padding:10px; margin-top:30px">Reset All</button>
@@ -104,6 +103,7 @@
     const db = getDatabase(app);
     const tourneyRef = ref(db, 'live_tournament');
 
+    // Default state to prevent "undefined" errors
     let state = { view: 'setup', players: [], format: 3, courts: 2, groupMatches: [], brackets: { top: [], bottom: [] } };
     let isAdmin = false;
 
@@ -114,7 +114,7 @@
             isAdmin = true;
             document.body.classList.add('is-admin');
             document.getElementById('admin-lock-btn').innerText = "✅ Admin Mode";
-            alert("Editing enabled. You can now save changes to the cloud.");
+            alert("Unlocked! You can now manage the tournament.");
         } else { alert("Incorrect password."); }
     };
 
@@ -124,6 +124,8 @@
     onValue(tourneyRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
+            // Ensure data structure exists before assigning to prevent 'top' errors
+            if (!data.brackets) data.brackets = { top: [], bottom: [] };
             state = data;
             renderAll();
         }
@@ -138,7 +140,7 @@
         applyTabStyles(state.view);
     }
 
-    // --- TOURNAMENT LOGIC ---
+    // --- CORE LOGIC ---
     window.switchTab = (tabId) => {
         state.view = tabId;
         applyTabStyles(tabId);
@@ -174,7 +176,7 @@
     window.removePlayer = (idx) => { state.players.splice(idx,1); renderSetup(); save(); };
 
     window.startTournament = () => {
-        if (!isAdmin) return alert("Please Login as Admin to start the tournament.");
+        if (!isAdmin) return alert("Please Login as Admin (top right) before starting.");
         if (state.players.length < 2) return alert("Min 2 players required.");
         
         state.format = document.getElementById('match-format').value;
@@ -271,11 +273,18 @@
         state.brackets[t] = [r1];
     }
 
-    window.upB = (t, ri, mi, f, v) => { state.brackets[t][ri][mi][f] = v; save(); };
+    window.upB = (t, ri, mi, f, v) => { 
+        if (!state.brackets[t]) return;
+        state.brackets[t][ri][mi][f] = v; 
+        save(); 
+    };
 
     function renderB(t) {
         const c = document.getElementById(t + '-bracket');
-        if (!state.brackets[t]?.length) return c.innerHTML = "<p>No bracket generated.</p>";
+        // Check if bracket exists before mapping to avoid crashes
+        if (!state.brackets || !state.brackets[t] || state.brackets[t].length === 0) {
+            return c.innerHTML = "<p style='font-size:0.7rem; color:#94a3b8'>No bracket generated yet.</p>";
+        }
         c.innerHTML = state.brackets[t].map((round, ri) => `
             <div class="round-col"><div style="font-size:0.6rem; text-align:center; color:#94a3b8">ROUND ${ri+1}</div>
                 ${round.map((m, mi) => `<div class="match-box">
