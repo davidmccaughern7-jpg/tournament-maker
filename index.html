@@ -158,6 +158,7 @@
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
     const ADMIN_PASSWORD = "yourpassword123"; // <--- CHANGE THIS
+    const STORAGE_KEY = "daves_tourney_admin_pw"; // Key for local storage
 
     const firebaseConfig = {
         apiKey: "AIzaSyDZ9F1-Y7J10X-BIkhbhP8oHYeQHpndZTM",
@@ -176,16 +177,46 @@
     let state = { view: 'setup', players: [], format: 3, courts: 2, groupMatches: [], brackets: { top: [], bottom: [] } };
     let isAdmin = false;
 
-    // --- ADMIN ACCESS ---
+    // --- ADMIN ACCESS & LOCAL STORAGE ---
+
+    // Helper to trigger Admin UI mode
+    function activateAdminMode() {
+        isAdmin = true;
+        document.body.classList.add('is-admin');
+        const lockBtn = document.getElementById('admin-lock-btn');
+        if (lockBtn) lockBtn.innerText = "✅ Admin: Active";
+    }
+
+    // Check if password is saved in this browser
+    function checkSavedAuth() {
+        const savedPw = localStorage.getItem(STORAGE_KEY);
+        if (savedPw === ADMIN_PASSWORD) {
+            activateAdminMode();
+        }
+    }
+
     window.checkPassword = () => {
+        // If already admin, clicking again can act as a logout
+        if (isAdmin) {
+            if (confirm("Log out of Admin mode?")) {
+                localStorage.removeItem(STORAGE_KEY);
+                location.reload(); // Refresh to lock everything down
+            }
+            return;
+        }
+
         const pw = prompt("Enter Admin Password:");
         if (pw === ADMIN_PASSWORD) {
-            isAdmin = true;
-            document.body.classList.add('is-admin');
-            document.getElementById('admin-lock-btn').innerText = "✅ Admin: Active";
+            localStorage.setItem(STORAGE_KEY, pw); // Save to device
+            activateAdminMode();
             alert("Unlocked! You can now manage the tournament.");
-        } else { alert("Wrong password."); }
+        } else { 
+            alert("Wrong password."); 
+        }
     };
+
+    // Initialize Auth Check
+    checkSavedAuth();
 
     function save() { if (isAdmin) set(tourneyRef, state); }
 
@@ -193,7 +224,6 @@
     onValue(tourneyRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
-            // Safety: Ensure structure exists so mobile doesn't crash on 'undefined'
             if (!data.brackets) data.brackets = { top: [], bottom: [] };
             if (!data.players) data.players = [];
             state = data;
@@ -379,7 +409,6 @@
         state.brackets[t].push(nr); save();
     };
 
-    // FIXED RESET FUNCTION: Re-initializes everything properly
     window.resetAll = () => { 
         if(isAdmin && confirm("Are you sure? This wipes all players and scores!")) { 
             state = { 
@@ -394,5 +423,6 @@
         } 
     };
 </script>
+
 </body>
 </html>
