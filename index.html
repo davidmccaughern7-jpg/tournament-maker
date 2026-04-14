@@ -6,126 +6,126 @@
     <title>Daves Pro Tourney</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
-        :root { --p: #2563eb; --bg: #f8fafc; --card: #ffffff; --text: #0f172a; --danger: #ef4444; --success: #16a34a; --seed: #fef9c3; --border: #e2e8f0; }
+        :root { --p: #2563eb; --bg: #f8fafc; --card: #ffffff; --text: #0f172a; --danger: #ef4444; --success: #16a34a; --border: #e2e8f0; }
         
-        body { 
-            font-family: -apple-system, system-ui, sans-serif; 
-            background: var(--bg); color: var(--text); padding: 0; margin: 0; 
-            padding-bottom: 100px; -webkit-tap-highlight-color: transparent; 
-        }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 0; margin: 0; padding-bottom: 100px; -webkit-tap-highlight-color: transparent; }
 
-        /* Mobile Nav */
+        /* Navigation */
         nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; display: flex; border-top: 1px solid var(--border); z-index: 1000; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
-        .tab-btn { flex: 1; padding: 18px 5px; border: none; background: none; font-size: 0.8rem; font-weight: 700; color: #64748b; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;}
+        .tab-btn { flex: 1; padding: 15px 5px; border: none; background: none; font-size: 0.8rem; font-weight: bold; color: #64748b; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .tab-btn.active { color: var(--p); background: #f1f5f9; border-top: 3px solid var(--p); }
 
-        .container { max-width: 600px; margin: auto; padding: 12px; }
-        .card { background: var(--card); padding: 18px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 16px; border: 1px solid var(--border); }
+        .container { max-width: 700px; margin: auto; padding: 15px; }
+        .card { background: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid var(--border); }
         .hidden { display: none !important; }
 
-        /* Mobile-Friendly Inputs */
-        input[type="text"], input[type="number"], select { 
-            font-size: 16px !important; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; width: 100%; box-sizing: border-box; 
-        }
+        h2 { margin-top: 0; font-size: 1.25rem; border-bottom: 2px solid var(--p); padding-bottom: 10px; margin-bottom: 15px; }
+
+        /* Inputs */
+        input[type="text"], input[type="number"], select { font-size: 16px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; width: 100%; box-sizing: border-box; }
+        button { cursor: pointer; font-size: 16px; font-weight: bold; border: none; transition: 0.2s; }
+        button:active { opacity: 0.7; }
+        .btn-primary { background: var(--p); color: white; padding: 15px; border-radius: 10px; width: 100%; }
+        .btn-danger { background: none; border: 1px solid var(--danger); color: var(--danger); padding: 15px; border-radius: 10px; width: 100%; }
+
+        /* Match UI */
+        .match-box { background: #f1f5f9; border-radius: 10px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border); }
+        .player-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: 500; }
+        .set-inputs { display: flex; gap: 5px; justify-content: flex-end; }
+        .set-box { width: 40px !important; height: 35px; text-align: center; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 !important; background: #fff; }
+        .winner-dropdown { width: 100%; padding: 10px; margin-top: 5px; border-radius: 6px; background: #e0e7ff; border: 1px solid #818cf8; font-weight: bold; }
+
+        /* Bracket UI */
+        .export-area { background: #fff; border-radius: 10px; padding: 10px; overflow-x: auto; }
+        .bracket-scroll { display: flex; gap: 30px; padding: 15px 0; min-width: max-content; }
+        .round-col { display: flex; flex-direction: column; justify-content: space-around; width: 260px; }
+        .bracket-match { background: #fff; border: 2px solid #cbd5e1; border-radius: 8px; padding: 10px; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         
-        /* Dynamic Set Inputs */
-        .set-input { width: 42px !important; height: 38px; text-align: center; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: bold; background: #fff; }
+        /* Bracket Connecting Lines */
+        .bracket-match::after { content: ""; position: absolute; right: -30px; top: 50%; width: 30px; border-top: 2px solid #cbd5e1; z-index: 1; }
+        .round-col:last-child .bracket-match::after { display: none; }
 
-        /* Match Display */
-        .match-box { background: #f1f5f9; border-radius: 12px; padding: 12px; margin: 12px 0; border: 1px solid #e2e8f0; }
-        .player-row { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; }
-        .sets-container { display: flex; gap: 5px; justify-content: flex-end; }
-
-        /* Bracket Layout */
-        .bracket-scroll { display: flex; overflow-x: auto; gap: 20px; padding: 10px 0; scroll-snap-type: x mandatory; }
-        .round-col { min-width: 250px; scroll-snap-align: start; }
-        .bracket-card { background: white; border: 2px solid #cbd5e1; border-radius: 10px; margin-bottom: 15px; overflow: hidden; }
-        .winner-pick { width: 100%; padding: 8px; font-size: 0.8rem; background: #f0fdf4; border: none; border-top: 1px solid #e2e8f0; font-weight: bold; }
-
-        /* Admin UI */
-        #admin-lock-btn { position: fixed; top: 10px; right: 10px; z-index: 2000; background: #1e293b; color: white; border: none; padding: 8px 15px; border-radius: 20px; font-size: 0.75rem; cursor: pointer;}
+        /* Admin Styles */
+        #admin-badge { position: fixed; top: 10px; right: 10px; z-index: 2000; background: #1e293b; color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.75rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         body:not(.is-admin) .admin-only { display: none !important; }
-        body:not(.is-admin) input, body:not(.is-admin) select { pointer-events: none; opacity: 0.8; }
-        
-        .export-btn { background: #6366f1; color: white; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; margin: 10px 0; border: none; cursor: pointer;}
-        button { cursor: pointer; }
+        body:not(.is-admin) input, body:not(.is-admin) select { pointer-events: none; opacity: 0.7; }
     </style>
 </head>
 <body>
 
-<button id="admin-lock-btn" onclick="window.checkPassword()">🔓 Admin Login</button>
+<button id="admin-badge" onclick="window.promptAdmin()">🔓 Admin Login</button>
 
 <div class="container">
     <div id="tab-setup" class="tab-content">
         <div class="card">
-            <h2>Tournament Roster</h2>
-            <div style="display:flex; gap:10px; margin-bottom:12px">
-                <input type="text" id="name-input" placeholder="Name" onkeypress="if(event.key==='Enter') window.addPlayer()">
-                <button onclick="window.addPlayer()" style="background:var(--p); color:white; border:none; border-radius:8px; padding:0 20px;">Add</button>
+            <h2>Tournament Setup</h2>
+            <div style="display:flex; gap:10px; margin-bottom:15px">
+                <input type="text" id="new-player" placeholder="Enter Player Name" onkeypress="if(event.key==='Enter') window.addPlayer()">
+                <button onclick="window.addPlayer()" style="background:var(--p); color:white; border-radius:8px; padding:0 20px;">Add</button>
             </div>
-            <label style="display:flex; align-items:center; gap:10px; margin-bottom:20px; font-size:1rem">
-                <input type="checkbox" id="seed-checkbox" style="width:22px; height:22px;"> Top Seed (⭐)
+            <label style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
+                <input type="checkbox" id="is-seed" style="width:20px; height:20px;"> Mark as Top Seed (⭐)
             </label>
-            <div id="setup-player-list"></div>
+            
+            <div id="roster-list"></div>
             
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:20px">
                 <div>
-                    <label style="font-size:0.75rem; font-weight:bold">FORMAT</label>
-                    <select id="match-format">
+                    <label style="font-size:0.8rem; font-weight:bold; color:#64748b;">FORMAT</label>
+                    <select id="tourney-format">
                         <option value="1">BO1 (1 Set)</option>
                         <option value="3" selected>BO3 (3 Sets)</option>
                         <option value="5">BO5 (5 Sets)</option>
                     </select>
                 </div>
                 <div>
-                    <label style="font-size:0.75rem; font-weight:bold">COURTS</label>
-                    <input type="number" id="courts" value="2">
+                    <label style="font-size:0.8rem; font-weight:bold; color:#64748b;">COURTS</label>
+                    <input type="number" id="tourney-courts" value="2" inputmode="numeric">
                 </div>
             </div>
-            <button onclick="window.startTournament()" style="width:100%; padding:18px; background:var(--p); color:white; border:none; border-radius:12px; font-weight:bold; margin-top:20px">Start Group Stage</button>
+            <button onclick="window.startGroups()" class="btn-primary" style="margin-top:20px;">Generate Groups</button>
         </div>
     </div>
 
-    <div id="tab-groups" class="tab-content hidden"><div id="groups-container"></div></div>
+    <div id="tab-groups" class="tab-content hidden"><div id="groups-render"></div></div>
 
-    <div id="tab-standings" class="tab-content hidden"><div class="card"><h2>Leaderboard</h2><div id="standings-tables"></div></div></div>
+    <div id="tab-standings" class="tab-content hidden"><div class="card"><h2>Live Leaderboard</h2><div id="standings-render"></div></div></div>
 
     <div id="tab-brackets" class="tab-content hidden">
         <div class="card">
-            <h2>Playoff Brackets</h2>
-            <button onclick="window.generateBrackets()" class="admin-only" style="width:100%; padding:14px; background:var(--success); color:white; border:none; border-radius:8px; margin-bottom:15px">Generate Bracket</button>
-            
-            <button onclick="window.exportFullTree()" class="export-btn">📸 Download Bracket Image</button>
+            <h2>Playoffs</h2>
+            <button onclick="window.generateBrackets()" class="btn-primary admin-only" style="background:var(--success); margin-bottom:15px;">Generate Finals Bracket</button>
+            <button onclick="window.exportImage()" class="btn-primary" style="background:#6366f1; margin-bottom:20px;">📸 Save Image</button>
 
-            <div id="export-area" style="background:white; border-radius:8px;">
-                <div style="background:var(--p); color:white; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:10px">🏆 CHAMPIONSHIP</div>
-                <div id="top-bracket" class="bracket-scroll"></div>
+            <div class="export-area" id="tree-container">
+                <div style="background:var(--p); color:white; padding:8px 12px; border-radius:6px; font-weight:bold;">🏆 CHAMPIONSHIP</div>
+                <div id="top-bracket-render" class="bracket-scroll"></div>
 
-                <div style="background:#64748b; color:white; padding:10px; border-radius:8px; font-weight:bold; margin:20px 0 10px 0">🥈 CONSOLATION</div>
-                <div id="bottom-bracket" class="bracket-scroll"></div>
+                <div style="background:#64748b; color:white; padding:8px 12px; border-radius:6px; font-weight:bold; margin-top:20px;">🥈 CONSOLATION</div>
+                <div id="bottom-bracket-render" class="bracket-scroll"></div>
             </div>
 
-            <button onclick="window.advance('top')" class="admin-only" style="width:100%; padding:16px; background:var(--p); color:white; border:none; border-radius:12px; margin:20px 0">Advance Champ Round</button>
-            <button onclick="window.advance('bottom')" class="admin-only" style="width:100%; padding:16px; background:#64748b; color:white; border:none; border-radius:12px">Advance Consol. Round</button>
+            <button onclick="window.advanceRound('top')" class="btn-primary admin-only" style="margin-top:20px;">Advance Championship</button>
+            <button onclick="window.advanceRound('bottom')" class="btn-primary admin-only" style="background:#64748b; margin-top:10px;">Advance Consolation</button>
             
-            <button onclick="window.resetAll()" class="admin-only" style="width:100%; background:none; color:var(--danger); border:1px solid var(--danger); border-radius:8px; padding:12px; margin-top:40px">Reset Everything</button>
+            <button onclick="window.resetTournament()" class="btn-danger admin-only" style="margin-top:40px;">Reset Tournament</button>
         </div>
     </div>
 </div>
 
 <nav>
-    <button class="tab-btn active" data-tab="setup"><span>⚙️</span>Setup</button>
-    <button class="tab-btn" data-tab="groups"><span>🎾</span>Groups</button>
-    <button class="tab-btn" data-tab="standings"><span>📊</span>Standings</button>
-    <button class="tab-btn" data-tab="brackets"><span>🏆</span>Finals</button>
+    <button class="tab-btn active" onclick="window.switchTab('setup')">⚙️ Setup</button>
+    <button class="tab-btn" onclick="window.switchTab('groups')">🎾 Groups</button>
+    <button class="tab-btn" onclick="window.switchTab('standings')">📊 Standings</button>
+    <button class="tab-btn" onclick="window.switchTab('brackets')">🏆 Finals</button>
 </nav>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    const ADMIN_PASSWORD = "yourpassword123"; // <--- CHANGE THIS
-
+    // 1. HARDCODED SETTINGS
+    const ADMIN_PASSWORD = "Osmond2C";
     const firebaseConfig = {
       apiKey: "AIzaSyDZ9F1-Y7J10X-BIkhbhP8oHYeQHpndZTM",
       authDomain: "daves-tournament-maker.firebaseapp.com",
@@ -136,251 +136,270 @@
       appId: "1:852841247744:web:77f93529aecdc1e62654e5"
     };
 
+    // 2. STATE MANAGEMENT
+    let isAdmin = false;
+    let currentTab = 'setup';
+    let dbState = { players: [], format: 3, courts: 2, groupMatches: [], brackets: { top: [], bottom: [] } };
+
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const tourneyRef = ref(db, 'live_tournament');
+    const dbRef = ref(db, 'daves_live_tourney');
 
-    let state = { view: 'setup', players: [], format: 3, groupMatches: [], brackets: { top: [], bottom: [] } };
-    let isAdmin = false;
-
-    // --- BULLETPROOF TAB NAVIGATION ---
-    window.switchTab = (t) => { 
-        state.view = t; 
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('hidden', c.id !== 'tab-' + t));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
-        save(); 
-    };
-
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => window.switchTab(btn.dataset.tab));
-    });
-
-    // --- ADMIN LOGIN & LOCALSTORAGE ---
-    window.checkPassword = (stored) => {
-        const pw = stored || prompt("Enter Admin Password:");
+    // 3. AUTHENTICATION
+    window.promptAdmin = (autoPass) => {
+        const pw = autoPass || prompt("Enter Admin Password:");
         if (pw === ADMIN_PASSWORD) {
             isAdmin = true;
-            try { localStorage.setItem('daves_admin_pw', pw); } catch(e){} // Safely save
+            localStorage.setItem('daves_admin', pw);
             document.body.classList.add('is-admin');
-            document.getElementById('admin-lock-btn').innerText = "✅ Admin Mode";
-        } else if (!stored) alert("Incorrect.");
+            document.getElementById('admin-badge').innerText = "✅ Admin: Active";
+        } else if (!autoPass) {
+            alert("Incorrect Password.");
+        }
     };
-    
-    try {
-        const savedPw = localStorage.getItem('daves_admin_pw');
-        if (savedPw) window.checkPassword(savedPw);
-    } catch(e) {}
+    if (localStorage.getItem('daves_admin')) window.promptAdmin(localStorage.getItem('daves_admin'));
 
-    function save() { if (isAdmin) set(tourneyRef, state); }
+    // 4. FIREBASE SYNC
+    function saveToCloud() {
+        if (isAdmin) set(dbRef, dbState);
+    }
 
-    onValue(tourneyRef, (snapshot) => {
+    onValue(dbRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
-            if (!data.brackets) data.brackets = { top: [], bottom: [] };
-            if (!data.players) data.players = [];
-            state = data;
-            renderAll();
+            // Merge defaults in case database is empty
+            dbState = {
+                players: data.players || [],
+                format: data.format || 3,
+                courts: data.courts || 2,
+                groupMatches: data.groupMatches || [],
+                brackets: data.brackets || { top: [], bottom: [] }
+            };
+        } else {
+            dbState = { players: [], format: 3, courts: 2, groupMatches: [], brackets: { top: [], bottom: [] } };
         }
+        renderAll();
     });
+
+    // 5. CORE UI LOGIC
+    window.switchTab = (tabId) => {
+        currentTab = tabId;
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        document.getElementById('tab-' + tabId).classList.remove('hidden');
+        
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+    };
 
     function renderAll() {
         renderSetup();
         renderGroups();
         renderStandings();
-        renderBracket('top');
-        renderBracket('bottom');
-        
-        // Force UI to reflect current view
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('hidden', c.id !== 'tab-' + state.view));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === state.view));
+        renderTree('top');
+        renderTree('bottom');
     }
 
-    // --- FULL TREE EXPORT ---
-    window.exportFullTree = () => {
-        const area = document.getElementById('export-area');
-        const clone = area.cloneNode(true);
-        clone.style.width = "1000px"; 
-        clone.style.position = "absolute";
-        clone.style.left = "-9999px";
-        document.body.appendChild(clone);
-
-        clone.querySelectorAll('.bracket-scroll').forEach(el => {
-            el.style.display = "flex";
-            el.style.overflow = "visible";
-        });
-
-        html2canvas(clone, { backgroundColor: "#f8fafc" }).then(canvas => {
-            const link = document.createElement('a');
-            link.download = 'full-tournament-bracket.png';
-            link.href = canvas.toDataURL();
-            link.click();
-            document.body.removeChild(clone);
-        });
+    // 6. SETUP LOGIC
+    window.addPlayer = () => {
+        if (!isAdmin) return alert("Admin login required.");
+        const nameInp = document.getElementById('new-player');
+        const seedInp = document.getElementById('is-seed');
+        if (!nameInp.value.trim()) return;
+        
+        dbState.players.push({ name: nameInp.value.trim(), seeded: seedInp.checked });
+        nameInp.value = ''; seedInp.checked = false;
+        saveToCloud();
     };
 
-    // --- SETUP & ROSTER ---
-    window.addPlayer = () => {
-        const i = document.getElementById('name-input');
-        const s = document.getElementById('seed-checkbox');
-        if (!i.value.trim()) return;
-        state.players.push({ name: i.value.trim(), seeded: s.checked, wins: 0, ptsF: 0, ptsA: 0, diff: 0 });
-        i.value = ''; s.checked = false; renderSetup(); save();
+    window.removePlayer = (idx) => {
+        dbState.players.splice(idx, 1);
+        saveToCloud();
     };
 
     function renderSetup() {
-        const l = document.getElementById('setup-player-list');
-        l.innerHTML = (state.players || []).map((p, idx) => `
-            <div class="player-tag" style="display:flex; justify-content:space-between; align-items:center; background:${p.seeded ? 'var(--seed)' : 'white'}; padding:12px; margin-bottom:8px; border-radius:10px; border:1px solid #e2e8f0;">
-                <span>${p.seeded ? '⭐ ' : ''}${p.name}</span>
-                <span onclick="window.removePlayer(${idx})" style="color:var(--danger); font-weight:bold; cursor:pointer; padding:5px 10px;">×</span>
+        const container = document.getElementById('roster-list');
+        container.innerHTML = dbState.players.map((p, i) => `
+            <div style="display:flex; justify-content:space-between; padding:12px; background:${p.seeded ? '#fef9c3' : '#fff'}; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:8px;">
+                <span style="font-weight:bold">${p.seeded ? '⭐ ' : ''}${p.name}</span>
+                <span onclick="window.removePlayer(${i})" style="color:red; cursor:pointer; font-weight:bold;">×</span>
             </div>
         `).join('');
     }
 
-    window.removePlayer = (idx) => { state.players.splice(idx,1); renderSetup(); save(); };
-
-    // --- DYNAMIC SET GENERATOR ---
+    // 7. HELPER: DYNAMIC SETS
     function createEmptySets() {
-        const numSets = parseInt(state.format) || 3;
-        return Array.from({length: numSets}, () => ({s1:'', s2:''}));
+        return Array.from({ length: dbState.format }, () => ({ s1: '', s2: '' }));
     }
 
-    function generateSetInputsHTML(type, ri, mi, match, playerKey) {
-        const numSets = parseInt(state.format) || 3;
+    function buildSetInputsHTML(matchType, matchIdx, roundIdx, matchObj, pKey) {
         let html = '';
-        for (let s = 0; s < numSets; s++) {
-            // Safety check if format changed mid-tournament
-            if (!match.sets) match.sets = createEmptySets();
-            if (!match.sets[s]) match.sets[s] = {s1:'', s2:''};
-            
-            const val = match.sets[s][playerKey] !== undefined ? match.sets[s][playerKey] : '';
-            html += `<input type="number" class="set-input" value="${val}" onchange="window.updateSet('${type}',${ri},${mi},${s},'${playerKey}',this.value)">`;
+        const sets = matchObj.sets || createEmptySets();
+        for (let s = 0; s < dbState.format; s++) {
+            const val = sets[s] ? sets[s][pKey] : '';
+            html += `<input type="number" class="set-box" value="${val}" inputmode="numeric" onchange="window.updateScore('${matchType}', ${matchIdx}, ${roundIdx}, ${s}, '${pKey}', this.value)">`;
         }
         return html;
     }
 
-    window.startTournament = () => {
-        if (!isAdmin) return alert("Login as admin.");
-        state.format = document.getElementById('match-format').value;
-        state.courts = parseInt(document.getElementById('courts').value);
-        let groups = Array.from({ length: state.courts }, () => []);
-        state.players.sort(() => Math.random() - 0.5).forEach((p, idx) => groups[idx % state.courts].push(p));
-        state.groupMatches = [];
-        groups.forEach((gp, idx) => {
-            gp.forEach(p => p.groupId = idx + 1);
-            for (let a = 0; a < gp.length; a++) 
-                for (let b = a + 1; b < gp.length; b++) 
-                    state.groupMatches.push({ group: idx+1, p1: gp[a].name, p2: gp[b].name, sets: createEmptySets(), winner: "" });
-        });
-        window.switchTab('groups');
-    };
-
-    window.updateSet = (type, ri, mi, setNum, player, val) => {
-        let match = (type === 'group') ? state.groupMatches[ri] : state.brackets[type][ri][mi];
+    window.updateScore = (type, mIdx, rIdx, sIdx, pKey, val) => {
+        let match = type === 'group' ? dbState.groupMatches[mIdx] : dbState.brackets[type][rIdx][mIdx];
         if (!match.sets) match.sets = createEmptySets();
-        if (!match.sets[setNum]) match.sets[setNum] = {s1:'', s2:''};
+        if (!match.sets[sIdx]) match.sets[sIdx] = {s1:'', s2:''};
         
-        match.sets[setNum][player] = val === '' ? '' : parseInt(val);
-        save();
+        match.sets[sIdx][pKey] = val === '' ? '' : parseInt(val);
+        saveToCloud();
     };
 
-    window.updateWinner = (type, ri, mi, val) => {
-        if (type === 'group') state.groupMatches[ri].winner = val;
-        else state.brackets[type][ri][mi].winner = val;
-        save();
+    window.updateWinner = (type, mIdx, rIdx, val) => {
+        let match = type === 'group' ? dbState.groupMatches[mIdx] : dbState.brackets[type][rIdx][mIdx];
+        match.winner = val;
+        saveToCloud();
     };
 
-    function renderGroups() {
-        const c = document.getElementById('groups-container');
-        c.innerHTML = '';
-        if (!state.groupMatches) return;
-        for (let i = 1; i <= state.courts; i++) {
-            const matches = state.groupMatches.filter(m => m.group === i);
-            if (!matches.length) continue;
-            let h = `<div class="card"><h2>Group ${i}</h2>`;
-            matches.forEach(m => {
-                const idx = state.groupMatches.indexOf(m);
-                h += `<div class="match-box">
-                    <div class="player-row"><span>${m.p1}</span><div class="sets-container">${generateSetInputsHTML('group', idx, 0, m, 's1')}</div></div>
-                    <div class="player-row"><span>${m.p2}</span><div class="sets-container">${generateSetInputsHTML('group', idx, 0, m, 's2')}</div></div>
-                    <select class="winner-select" onchange="window.updateWinner('group',${idx},0,this.value)" style="width:100%; padding:10px; margin-top:10px; border-radius:8px;">
-                        <option value="">Choose Winner</option>
-                        <option value="${m.p1}" ${m.winner===m.p1?'selected':''}>${m.p1}</option>
-                        <option value="${m.p2}" ${m.winner===m.p2?'selected':''}>${m.p2}</option>
-                    </select>
-                </div>`;
-            });
-            c.innerHTML += h + `</div>`;
-        }
-    }
-
-    function renderStandings() {
-        const container = document.getElementById('standings-tables');
-        container.innerHTML = '';
-        if (!state.players || !state.groupMatches) return;
+    // 8. GROUPS LOGIC
+    window.startGroups = () => {
+        if (!isAdmin) return alert("Admin login required.");
+        if (dbState.players.length < 2) return alert("Need at least 2 players.");
         
-        state.players.forEach(p => { p.wins = 0; p.ptsDiff = 0; });
-        state.groupMatches.forEach(m => {
-            const a = state.players.find(p => p.name === m.p1);
-            const b = state.players.find(p => p.name === m.p2);
-            if (a && b) {
-                if (m.sets) {
-                    m.sets.forEach(s => { 
-                        const s1 = parseInt(s.s1) || 0;
-                        const s2 = parseInt(s.s2) || 0;
-                        a.ptsDiff += (s1 - s2); 
-                        b.ptsDiff += (s2 - s1); 
+        dbState.format = parseInt(document.getElementById('tourney-format').value);
+        dbState.courts = parseInt(document.getElementById('tourney-courts').value);
+        
+        let groups = Array.from({ length: dbState.courts }, () => []);
+        let shuffled = [...dbState.players].sort(() => Math.random() - 0.5);
+        
+        shuffled.forEach((p, i) => {
+            p.groupId = (i % dbState.courts) + 1;
+            groups[i % dbState.courts].push(p);
+        });
+
+        dbState.groupMatches = [];
+        groups.forEach((gp, idx) => {
+            for (let a = 0; a < gp.length; a++) {
+                for (let b = a + 1; b < gp.length; b++) {
+                    dbState.groupMatches.push({
+                        group: idx + 1, p1: gp[a].name, p2: gp[b].name,
+                        sets: createEmptySets(), winner: ""
                     });
                 }
-                if (m.winner === a.name) a.wins++; if (m.winner === b.name) b.wins++;
             }
         });
         
-        for (let i = 1; i <= state.courts; i++) {
-            const gp = state.players.filter(p => p.groupId === i).sort((a,b) => b.wins - a.wins || b.ptsDiff - a.ptsDiff);
-            let t = `<h3>Group ${i}</h3><table style="width:100%; border-collapse:collapse; margin-bottom:15px;"><tr><th style="text-align:left; padding:8px;">Player</th><th>W</th><th>Pts+/-</th></tr>`;
-            gp.forEach(p => t += `<tr><td style="padding:8px; border-bottom:1px solid #e2e8f0">${p.name}</td><td style="text-align:center"><b>${p.wins}</b></td><td style="text-align:center">${p.ptsDiff > 0 ? '+'+p.ptsDiff : p.ptsDiff}</td></tr>`);
-            container.innerHTML += t + `</table>`;
-        }
-    }
-
-    window.generateBrackets = () => {
-        if (!isAdmin) return;
-        state.players.forEach(p => { 
-            const gp = state.players.filter(x => x.groupId === p.groupId).sort((a,b) => b.wins - a.wins || b.ptsDiff - a.ptsDiff);
-            p.rank = gp.indexOf(p) + 1;
-        });
-        state.players.sort((a,b) => a.rank - b.rank || b.wins - a.wins);
-        const mid = Math.ceil(state.players.length / 2);
-        initB('top', state.players.slice(0, mid));
-        initB('bottom', state.players.slice(mid));
-        save();
+        saveToCloud();
+        document.querySelector('[onclick="window.switchTab(\'groups\')"]').click();
     };
 
-    function initB(t, list) {
-        const size = Math.pow(2, Math.ceil(Math.log2(list.length || 1)));
-        const r1 = [];
-        for (let i = 0; i < size / 2; i++) {
-            const p1 = list[i]?.name || "BYE";
-            const p2 = list[size-1-i]?.name || "BYE";
-            r1.push({ p1, p2, sets: createEmptySets(), winner: (p1==="BYE"?p2:(p2==="BYE"?p1:"")) });
+    function renderGroups() {
+        const container = document.getElementById('groups-render');
+        container.innerHTML = '';
+        if (!dbState.groupMatches || dbState.groupMatches.length === 0) return;
+
+        for (let i = 1; i <= dbState.courts; i++) {
+            const matches = dbState.groupMatches.filter(m => m.group === i);
+            if (matches.length === 0) continue;
+
+            let html = `<div class="card"><h2>Group ${i}</h2>`;
+            matches.forEach(m => {
+                const idx = dbState.groupMatches.indexOf(m);
+                html += `
+                <div class="match-box">
+                    <div class="player-row">
+                        <span>${m.p1}</span>
+                        <div class="set-inputs">${buildSetInputsHTML('group', idx, null, m, 's1')}</div>
+                    </div>
+                    <div class="player-row">
+                        <span>${m.p2}</span>
+                        <div class="set-inputs">${buildSetInputsHTML('group', idx, null, m, 's2')}</div>
+                    </div>
+                    <select class="winner-dropdown" onchange="window.updateWinner('group', ${idx}, null, this.value)">
+                        <option value="">Select Winner...</option>
+                        <option value="${m.p1}" ${m.winner === m.p1 ? 'selected' : ''}>${m.p1}</option>
+                        <option value="${m.p2}" ${m.winner === m.p2 ? 'selected' : ''}>${m.p2}</option>
+                    </select>
+                </div>`;
+            });
+            container.innerHTML += html + `</div>`;
         }
-        state.brackets[t] = [r1];
     }
 
-    function renderBracket(t) {
-        const c = document.getElementById(t + '-bracket');
-        if (!state.brackets[t]?.length) return c.innerHTML = "<p style='padding:10px; color:#94a3b8; font-size:0.8rem;'>No bracket generated.</p>";
+    // 9. STANDINGS LOGIC
+    function renderStandings() {
+        const container = document.getElementById('standings-render');
+        container.innerHTML = '';
+        if (dbState.players.length === 0 || dbState.groupMatches.length === 0) return;
+
+        // Reset stats
+        dbState.players.forEach(p => { p.wins = 0; p.ptsDiff = 0; });
+
+        // Calculate stats
+        dbState.groupMatches.forEach(m => {
+            const a = dbState.players.find(p => p.name === m.p1);
+            const b = dbState.players.find(p => p.name === m.p2);
+            if (a && b) {
+                (m.sets || []).forEach(s => {
+                    const s1 = parseInt(s.s1) || 0;
+                    const s2 = parseInt(s.s2) || 0;
+                    a.ptsDiff += (s1 - s2);
+                    b.ptsDiff += (s2 - s1);
+                });
+                if (m.winner === a.name) a.wins++;
+                if (m.winner === b.name) b.wins++;
+            }
+        });
+
+        // Render Tables
+        for (let i = 1; i <= dbState.courts; i++) {
+            const gp = dbState.players.filter(p => p.groupId === i).sort((a,b) => b.wins - a.wins || b.ptsDiff - a.ptsDiff);
+            let html = `<h3>Group ${i}</h3><table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+                <tr style="border-bottom:2px solid #cbd5e1;"><th style="text-align:left; padding:8px;">Player</th><th>W</th><th>Pts+/-</th></tr>`;
+            gp.forEach(p => {
+                html += `<tr><td style="padding:10px; border-bottom:1px solid #f1f5f9;">${p.name}</td><td style="text-align:center; font-weight:bold;">${p.wins}</td><td style="text-align:center;">${p.ptsDiff > 0 ? '+'+p.ptsDiff : p.ptsDiff}</td></tr>`;
+            });
+            container.innerHTML += html + `</table>`;
+        }
+    }
+
+    // 10. BRACKETS LOGIC
+    window.generateBrackets = () => {
+        if (!isAdmin) return alert("Admin login required.");
         
-        c.innerHTML = state.brackets[t].map((round, ri) => `
+        // Rank players globally based on group placement
+        dbState.players.forEach(p => { 
+            const gp = dbState.players.filter(x => x.groupId === p.groupId).sort((a,b) => b.wins - a.wins || b.ptsDiff - a.ptsDiff);
+            p.rank = gp.indexOf(p) + 1;
+        });
+        
+        // Sort entire roster by rank, then wins
+        let sortedRoster = [...dbState.players].sort((a,b) => a.rank - b.rank || b.wins - a.wins);
+        const mid = Math.ceil(sortedRoster.length / 2);
+        
+        initTree('top', sortedRoster.slice(0, mid));
+        initTree('bottom', sortedRoster.slice(mid));
+        saveToCloud();
+    };
+
+    function initTree(type, list) {
+        const size = Math.pow(2, Math.ceil(Math.log2(list.length || 1)));
+        const round1 = [];
+        for (let i = 0; i < size / 2; i++) {
+            const p1 = list[i]?.name || "BYE";
+            const p2 = list[size - 1 - i]?.name || "BYE";
+            round1.push({ p1, p2, sets: createEmptySets(), winner: (p1 === "BYE" ? p2 : (p2 === "BYE" ? p1 : "")) });
+        }
+        dbState.brackets[type] = [round1];
+    }
+
+    function renderTree(type) {
+        const container = document.getElementById(type + '-bracket-render');
+        const treeData = dbState.brackets[type];
+        
+        if (!treeData || treeData.length === 0) {
+            return container.innerHTML = "<p style='color:#94a3b8; font-style:italic;'>Bracket not generated yet.</p>";
+        }
+
+        container.innerHTML = treeData.map((round, rIdx) => `
             <div class="round-col">
-                <div style="text-align:center; font-size:0.7rem; font-weight:bold; color:#94a3b8; margin-bottom:10px">ROUND ${ri+1}</div>
-                ${round.map((m, mi) => `
-                    <div class="bracket-card">
-                        <div class="player-row" style="padding:10px; margin:0; border-bottom:1px solid #e2e8f0;">
-                            <span>${m.p1}</span>
-                            <div class="sets-container">${m.p1!=='BYE' ? generateSetInputsHTML(t, ri, mi, m, 's1') : ''}</div>
-                        </div>
-                        <div class="player-row" style="padding:10px; margin:0;">
-                            <span>${m.p2}</span>
-                            <div class="sets-container">${m.p2!=='BYE' ? generateSetInputsHTML(
+                <div style="text-align:center; font-size:0.75rem; color:#64748b; font-weight:bold; margin-bottom:10px;">ROUND ${rIdx + 1}</div>
+                ${round.map((m, mIdx) => `
+                    <div class="bracket-match">
+                        <div class="player-row">
+                            <span
