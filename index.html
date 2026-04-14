@@ -33,7 +33,6 @@
         .player-tag { background: #fff; border: 1px solid #e2e8f0; margin-bottom: 8px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; }
         .match-box { background: #f1f5f9; border-radius: 12px; padding: 12px; margin: 12px 0; border: 1px solid #e2e8f0; }
         
-        /* Set Grid - Optimized for Mobile width */
         .set-grid { display: grid; grid-template-columns: 1fr repeat(5, 38px); gap: 4px; align-items: center; margin: 6px 0; }
         .set-input { padding: 4px !important; text-align: center; font-weight: bold; height: 32px; font-size: 14px !important; border-radius: 4px !important; }
         .player-name-label { font-weight: bold; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -48,11 +47,18 @@
         .is-seeded { background: var(--seed); border-color: #facc15; }
         #admin-lock-btn { position: fixed; top: 10px; right: 10px; z-index: 2000; background: #1e293b; color: white; padding: 8px 12px; border-radius: 20px; font-size: 0.75rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         
+        /* ADMIN LOCK CSS */
         body:not(.is-admin) .admin-only { display: none !important; }
-        body:not(.is-admin) input, body:not(.is-admin) select { pointer-events: none; opacity: 0.8; }
+        body:not(.is-admin) .set-input, 
+        body:not(.is-admin) select:not(.tab-btn), 
+        body:not(.is-admin) #group-logic-type,
+        body:not(.is-admin) #group-value { 
+            pointer-events: none; 
+            opacity: 0.6; 
+        }
     </style>
 </head>
-<body>
+<body class="">
 
 <button id="admin-lock-btn" onclick="checkPassword()">🔓 Admin Login</button>
 
@@ -125,7 +131,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    const ADMIN_PASSWORD = "yourpassword123"; // <--- CHANGE THIS
+    const ADMIN_PASSWORD = "yourpassword123"; 
     const STORAGE_KEY = "daves_tourney_admin_pw";
 
     const firebaseConfig = {
@@ -142,10 +148,11 @@
     const db = getDatabase(app);
     const tourneyRef = ref(db, 'live_tournament');
 
+    // Default State
     let state = { view: 'setup', players: [], format: 3, groupMatches: [], brackets: { top: [], bottom: [] } };
     let isAdmin = false;
 
-    // --- ADMIN AUTH & LOCAL STORAGE ---
+    // --- AUTH ---
     function activateAdminMode() {
         isAdmin = true;
         document.body.classList.add('is-admin');
@@ -155,7 +162,7 @@
 
     window.checkPassword = () => {
         if (isAdmin) {
-            if (confirm("Log out of Admin mode?")) {
+            if (confirm("Log out?")) {
                 localStorage.removeItem(STORAGE_KEY);
                 location.reload();
             }
@@ -176,9 +183,13 @@
     onValue(tourneyRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
+            // Ensure properties exist even if database is partial
+            if (!data.players) data.players = [];
+            if (!data.groupMatches) data.groupMatches = [];
+            if (!data.brackets) data.brackets = { top: [], bottom: [] };
             state = data;
-            renderAll();
         }
+        renderAll();
     });
 
     function renderAll() {
@@ -190,11 +201,11 @@
         applyTabStyles(state.view);
     }
 
-    // --- TABS ---
+    // --- LOGIC ---
     window.switchTab = (tabId) => {
         state.view = tabId;
         applyTabStyles(tabId);
-        save();
+        if (isAdmin) save();
     };
 
     function applyTabStyles(tabId) {
@@ -204,36 +215,50 @@
         btns.forEach((btn, i) => btn.classList.toggle('active', tabList[i] === tabId));
     }
 
-    // --- SETUP LOGIC ---
     window.toggleGroupInputs = () => {
         const type = document.getElementById('group-logic-type').value;
         document.getElementById('group-label').innerText = type === 'courts' ? 'NUMBER OF COURTS' : 'MAX PLAYERS PER GROUP';
     };
 
     window.addPlayer = () => {
+        if (!isAdmin) return alert("Please Login as Admin to add players.");
         const i = document.getElementById('name-input');
         const s = document.getElementById('seed-checkbox');
         if (!i.value.trim()) return;
-        state.players.push({ name: i.value.trim(), seeded: s.checked, wins: 0, setsWon:0, diff: 0, groupId: null });
+        
+        state.players.push({ 
+            name: i.value.trim(), 
+            seeded: s.checked, 
+            wins: 0, 
+            setsWon: 0, 
+            diff: 0, 
+            groupId: null 
+        });
+        
         i.value = ''; s.checked = false;
-        renderSetup(); save();
+        renderSetup(); 
+        save();
     };
 
     function renderSetup() {
         const l = document.getElementById('setup-player-list');
-        if (!state.players) return;
-        l.innerHTML = state.players.map((p, idx) => `
+        l.innerHTML = (state.players || []).map((p, idx) => `
             <div class="player-tag ${p.seeded ? 'is-seeded' : ''}">
                 <span>${p.seeded ? '⭐ ' : ''}${p.name}</span>
-                <span onclick="removePlayer(${idx})" style="color:var(--danger); font-weight:bold; padding:5px 10px; cursor:pointer">×</span>
+                <span onclick="removePlayer(${idx})" style="color:var(--danger); font-weight:bold; padding:5px 10px; cursor:pointer" class="admin-only">×</span>
             </div>
         `).join('');
     }
 
-    window.removePlayer = (idx) => { state.players.splice(idx,1); renderSetup(); save(); };
+    window.removePlayer = (idx) => { 
+        if (!isAdmin) return;
+        state.players.splice(idx,1); 
+        renderSetup(); 
+        save(); 
+    };
 
     window.startTournament = () => {
-        if (!isAdmin) return alert("Please Login as Admin first.");
+        if (!isAdmin) return alert("Admin login required.");
         if (state.players.length < 2) return alert("Min 2 players required.");
         
         const type = document.getElementById('group-logic-type').value;
@@ -267,8 +292,8 @@
         save();
     };
 
-    // --- MATCH LOGIC ---
     window.updateSet = (mIdx, setIdx, field, val) => {
+        if(!isAdmin) return;
         state.groupMatches[mIdx].sets[setIdx][field] = parseInt(val) || 0;
         save();
     };
@@ -276,7 +301,10 @@
     function renderGroups() {
         const c = document.getElementById('groups-container');
         c.innerHTML = '';
-        if (!state.groupMatches) return;
+        if (!state.groupMatches || state.groupMatches.length === 0) {
+            c.innerHTML = "<div class='card'>No groups generated yet.</div>";
+            return;
+        }
         const groupIds = [...new Set(state.groupMatches.map(m => m.group))];
         
         groupIds.forEach(gid => {
@@ -298,17 +326,16 @@
         });
     }
 
-    // --- STANDINGS LOGIC ---
     function renderStandings() {
         const container = document.getElementById('standings-tables');
         container.innerHTML = '';
-        if (!state.players) return;
+        if (!state.players || state.players.length === 0) return;
         
-        state.players.forEach(p => { p.wins = 0; p.diff = 0; p.setsWon = 0; });
+        const standingsData = state.players.map(p => ({ ...p, wins: 0, diff: 0, setsWon: 0 }));
 
-        state.groupMatches.forEach(m => {
-            const p1 = state.players.find(p => p.name === m.p1);
-            const p2 = state.players.find(p => p.name === m.p2);
+        (state.groupMatches || []).forEach(m => {
+            const p1 = standingsData.find(p => p.name === m.p1);
+            const p2 = standingsData.find(p => p.name === m.p2);
             if (!p1 || !p2) return;
 
             let mSets1 = 0, mSets2 = 0;
@@ -323,9 +350,9 @@
             if (mSets1 > mSets2) p1.wins++; else if (mSets2 > mSets1) p2.wins++;
         });
 
-        const gIds = [...new Set(state.players.map(p => p.groupId))].filter(id => id).sort();
+        const gIds = [...new Set(standingsData.map(p => p.groupId))].filter(id => id).sort();
         gIds.forEach(id => {
-            const gp = state.players.filter(p => p.groupId === id)
+            const gp = standingsData.filter(p => p.groupId === id)
                 .sort((a,b) => b.wins - a.wins || b.setsWon - a.setsWon || b.diff - a.diff);
             
             let table = `<h3>Group ${id}</h3><table><tr><th>Player</th><th>W</th><th>Sets</th><th>+/-</th></tr>`;
@@ -334,14 +361,25 @@
         });
     }
 
-    // --- BRACKET LOGIC ---
     window.generateBrackets = () => {
         if (!isAdmin) return;
+        const standingsData = state.players.map(p => ({ ...p, wins: 0, diff: 0, setsWon: 0 }));
+        (state.groupMatches || []).forEach(m => {
+            const p1 = standingsData.find(p => p.name === m.p1);
+            const p2 = standingsData.find(p => p.name === m.p2);
+            if (!p1 || !p2) return;
+            let mSets1 = 0, mSets2 = 0;
+            m.sets.forEach(s => {
+                p1.diff += (s.s1 - s.s2); p2.diff += (s.s2 - s.s1);
+                if (s.s1 > s.s2) mSets1++; else if (s.s2 > s.s1) mSets2++;
+            });
+            if (mSets1 > mSets2) p1.wins++; else if (mSets2 > mSets1) p2.wins++;
+        });
+
         const rankedPlayers = [];
-        const gIds = [...new Set(state.players.map(p => p.groupId))].filter(id => id);
-        
+        const gIds = [...new Set(standingsData.map(p => p.groupId))].filter(id => id);
         gIds.forEach(id => {
-            const gp = state.players.filter(p => p.groupId === id)
+            const gp = standingsData.filter(p => p.groupId === id)
                 .sort((a,b) => b.wins - a.wins || b.setsWon - a.setsWon || b.diff - a.diff);
             gp.forEach((p, idx) => p.tempRank = idx + 1);
             rankedPlayers.push(...gp);
@@ -367,25 +405,26 @@
     }
 
     window.upB = (t, ri, mi, f, v) => { 
+        if(!isAdmin) return;
         state.brackets[t][ri][mi][f] = v; 
         save(); 
     };
 
     function renderB(t) {
         const c = document.getElementById(t + '-bracket');
-        if (!state.brackets?.[t]?.length) return c.innerHTML = "<p style='font-size:0.75rem; color:#94a3b8; padding:10px;'>No bracket generated.</p>";
+        if (!state.brackets?.[t]?.length) return c.innerHTML = "<p style='font-size:0.75rem; color:#94a3b8; padding:10px;'>No bracket yet.</p>";
         
         c.innerHTML = state.brackets[t].map((round, ri) => `
             <div class="round-col">
                 <div style="font-size:0.65rem; text-align:center; color:#94a3b8; font-weight:bold; margin-bottom:5px;">ROUND ${ri+1}</div>
                 ${round.map((m, mi) => `<div class="match-box" style="padding:10px;">
                     <div class="player-slot" style="font-size:0.85rem; display:flex; justify-content:space-between; margin-bottom:5px;">
-                        <span>${m.p1}</span> ${m.p1!=='BYE' ? `<input type="number" style="width:40px; padding:2px;" value="${m.s1}" onchange="upB('${t}',${ri},${mi},'s1',this.value)">`:''}
+                        <span>${m.p1}</span> ${m.p1!=='BYE' ? `<input type="number" style="width:40px; padding:2px;" value="${m.s1}" onchange="upB('${t}',${ri},${mi},'s1',this.value)" class="admin-only">`:''}
                     </div>
                     <div class="player-slot" style="font-size:0.85rem; display:flex; justify-content:space-between; margin-bottom:8px;">
-                        <span>${m.p2}</span> ${m.p2!=='BYE' ? `<input type="number" style="width:40px; padding:2px;" value="${m.s2}" onchange="upB('${t}',${ri},${mi},'s2',this.value)">`:''}
+                        <span>${m.p2}</span> ${m.p2!=='BYE' ? `<input type="number" style="width:40px; padding:2px;" value="${m.s2}" onchange="upB('${t}',${ri},${mi},'s2',this.value)" class="admin-only">`:''}
                     </div>
-                    <select onchange="upB('${t}',${ri},${mi},'winner',this.value)" style="font-size:0.7rem; padding:4px;">
+                    <select onchange="upB('${t}',${ri},${mi},'winner',this.value)" style="font-size:0.7rem; padding:4px;" class="admin-only">
                         <option value="">Winner</option>
                         <option value="${m.p1}" ${m.winner===m.p1?'selected':''}>${m.p1}</option>
                         <option value="${m.p2}" ${m.winner===m.p2?'selected':''}>${m.p2}</option>
@@ -396,6 +435,7 @@
     }
 
     window.advance = (t) => {
+        if(!isAdmin) return;
         const r = state.brackets[t][state.brackets[t].length - 1];
         const nr = [];
         for (let i = 0; i < r.length; i += 2) {
@@ -406,11 +446,14 @@
     };
 
     window.resetAll = () => { 
-        if(confirm("Are you sure? This wipes all players and scores!")) { 
+        if(isAdmin && confirm("Reset everything?")) { 
             state = { view: 'setup', players: [], format: 3, groupMatches: [], brackets: { top: [], bottom: [] } }; 
             save(); 
         } 
     };
+
+    // Force initial render
+    renderAll();
 </script>
 </body>
 </html>
