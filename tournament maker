@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Live Tourney Dash</title>
+    <style>
+        :root { --p: #2563eb; --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --danger: #ef4444; --success: #16a34a; --seed: #fef9c3; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 0; margin: 0; padding-bottom: 80px; }
+        
+        /* Navigation */
+        nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; display: flex; border-top: 1px solid #e2e8f0; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+        .tab-btn { flex: 1; padding: 15px 5px; border: none; background: none; font-size: 0.75rem; font-weight: bold; color: #64748b; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .tab-btn.active { color: var(--p); border-top: 3px solid var(--p); background: #f8fafc; }
+
+        .container { max-width: 600px; margin: auto; padding: 15px; }
+        .card { background: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        
+        .hidden { display: none; }
+        h2 { margin-top: 0; font-size: 1.2rem; border-bottom: 2px solid var(--p); padding-bottom: 8px; }
+        h3 { font-size: 1rem; margin-bottom: 10px; color: var(--p); }
+
+        /* Roster & Matches */
+        .roster-box { background: #eff6ff; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px dashed #bfdbfe; }
+        .roster-list { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 5px 0 0 0; }
+        .roster-item { background: #fff; padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; border: 1px solid #dbeafe; font-weight: 500; }
+        .match-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin: 10px 0; position: relative; }
+        .player-slot { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
+        .player-slot input { width: 60px; padding: 8px; text-align: center; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .winner-select { width: 100%; padding: 10px; margin-top: 10px; border-radius: 6px; background: #f0fdf4; border: 1px solid #16a34a; font-size: 0.9rem; }
+
+        .bracket-scroll { display: flex; overflow-x: auto; gap: 15px; padding: 10px 0; }
+        .round-col { min-width: 240px; flex-shrink: 0; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 10px; }
+        th { text-align: left; color: #64748b; padding: 8px; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
+        .is-seeded { background: var(--seed); }
+
+        /* Admin Styles */
+        #admin-lock-btn { position: fixed; top: 10px; right: 10px; z-index: 2000; background: #334155; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 0.7rem; cursor: pointer; }
+        body:not(.is-admin) input, body:not(.is-admin) select, body:not(.is-admin) button:not(.tab-btn):not(#admin-lock-btn) { 
+            pointer-events: none; opacity: 0.6; filter: grayscale(1);
+        }
+    </style>
+</head>
+<body>
+
+<button id="admin-lock-btn" onclick="checkPassword()">🔓 Admin Login</button>
+
+<div class="container">
+    <div id="tab-setup" class="tab-content">
+        <div class="card">
+            <h2>Tournament Setup</h2>
+            <div style="display:flex; gap:8px; margin-bottom:10px">
+                <input type="text" id="name-input" placeholder="Player Name" onkeypress="if(event.key==='Enter') addPlayer()">
+                <button onclick="addPlayer()" style="width:80px; background:var(--p); color:white; border:none; border-radius:8px; font-weight:bold">Add</button>
+            </div>
+            <label style="display:flex; align-items:center; gap:8px; margin-bottom:15px; font-size:0.9rem">
+                <input type="checkbox" id="seed-checkbox"> Mark as Top Seed (⭐)
+            </label>
+            <div id="setup-player-list" style="margin-bottom:15px; border:1px solid #e2e8f0; border-radius:8px; max-height:200px; overflow:auto"></div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
+                <div><label style="font-size:0.7rem">Format</label><select id="match-format"><option value="1">BO1</option><option value="3" selected>BO3</option><option value="5">BO5</option></select></div>
+                <div><label style="font-size:0.7rem">Courts</label><input type="number" id="courts" value="2"></div>
+            </div>
+            <button onclick="startTournament()" style="width:100%; padding:15px; background:var(--p); color:white; border:none; border-radius:8px; font-weight:bold; margin-top:15px">Generate & Start</button>
+        </div>
+    </div>
+
+    <div id="tab-groups" class="tab-content hidden"><div id="groups-container"></div></div>
+    <div id="tab-standings" class="tab-content hidden"><div class="card"><h2>Live Leaderboard</h2><div id="standings-tables"></div></div></div>
+    
+    <div id="tab-brackets" class="tab-content hidden">
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
+                <h2>Playoffs</h2>
+                <button onclick="generateBrackets()" style="width:auto; padding:8px 15px; background:var(--success); color:white; border:none; border-radius:6px; font-size:0.8rem">Update Seeds</button>
+            </div>
+            <div id="top-bracket-label" style="background:var(--p); color:white; padding:5px 10px; border-radius:4px; font-size:0.8rem; font-weight:bold">🏆 CHAMPIONSHIP</div>
+            <div id="top-bracket" class="bracket-scroll"></div>
+            <button onclick="advance('top')" style="width:100%; padding:10px; background:var(--p); color:white; border:none; border-radius:8px; margin:10px 0">Advance Winners</button>
+
+            <div id="bottom-bracket-label" style="background:#64748b; color:white; padding:5px 10px; border-radius:4px; font-size:0.8rem; font-weight:bold; margin-top:20px">🥈 CONSOLATION</div>
+            <div id="bottom-bracket" class="bracket-scroll"></div>
+            <button onclick="advance('bottom')" style="width:100%; padding:10px; background:#64748b; color:white; border:none; border-radius:8px; margin:10px 0">Advance Winners</button>
+            <button onclick="resetAll()" style="width:100%; background:none; color:var(--danger); border:1px solid var(--danger); border-radius:8px; padding:10px; margin-top:30px">Reset All</button>
+        </div>
+    </div>
+</div>
+
+<nav>
+    <button class="tab-btn active" onclick="switchTab('setup')"><span>⚙️</span>Setup</button>
+    <button class="tab-btn" onclick="switchTab('groups')"><span>🎾</span>Groups</button>
+    <button class="tab-btn" onclick="switchTab('standings')"><span>📊</span>Standings</button>
+    <button class="tab-btn" onclick="switchTab('brackets')"><span>🏆</span>Finals</button>
+</nav>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    // SET YOUR PASSWORD HERE
+    const ADMIN_PASSWORD = "yourpassword123";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDZ9F1-Y7J10X-BIkhbhP8oHYeQHpndZTM",
+      authDomain: "daves-tournament-maker.firebaseapp.com",
+      databaseURL: "https://daves-tournament-maker-default-rtdb.firebaseio.com",
+      projectId: "daves-tournament-maker",
+      storageBucket: "daves-tournament-maker.firebasestorage.app",
+      messagingSenderId: "852841247744",
+      appId: "1:852841247744:web:77f93529aecdc1e62654e5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const tourneyRef = ref(db, 'live_tournament');
+
+    let state = { view: 'setup', players: [], format: 3, courts: 2, groupMatches: [], brackets: { top: [], bottom: [] } };
+    let isAdmin = false;
+
+    // --- ADMIN LOGIC ---
+    window.checkPassword = () => {
+        const pw = prompt("Enter Admin Password to edit:");
+        if (pw === ADMIN_PASSWORD) {
+            isAdmin = true;
+            document.body.classList.add('is-admin');
+            document.getElementById('admin-lock-btn').innerText = "✅ Admin: Unlocked";
+            alert("Unlocked! You can now edit and save changes.");
+        } else {
+            alert("Incorrect password.");
+        }
+    };
+
+    function save() { 
+        if (isAdmin) set(tourneyRef, state); 
+    }
+
+    onValue(tourneyRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            state = data;
+            renderAll();
+        }
+    });
+
+    function renderAll() {
+        renderSetup();
+        renderGroups();
+        renderStandings();
+        renderB('top');
+        renderB('bottom');
+        applyTabStyles(state.view);
+    }
+
+    // --- UI & TAB LOGIC ---
+    window.switchTab = (tabId) => {
+        state.view = tabId;
+        applyTabStyles(tabId);
+        save();
+    };
+
+    function applyTabStyles(tabId) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('hidden', c.id !== 'tab-' + tabId));
+        const btns = document.querySelectorAll('.tab-btn');
+        const tabList = ['setup', 'groups', 'standings', 'brackets'];
+        btns.forEach((btn, i) => btn.classList.toggle('active', tabList[i] === tabId));
+    }
+
+    // --- SETUP LOGIC ---
+    window.addPlayer = () => {
+        const i = document.getElementById('name-input');
+        const s = document.getElementById('seed-checkbox');
+        if (!i.value.trim()) return;
+        state.players.push({ name: i.value.trim(), seeded: s.checked, wins: 0, ptsF: 0, ptsA: 0, diff: 0, groupRank: 0 });
+        i.value = ''; s.checked = false; i.focus();
+        renderSetup(); 
+        save();
+    };
+
+    function renderSetup() {
+        const l = document.getElementById('setup-player-list');
+        l.innerHTML = state.players.map((p, idx) => `
+            <div class="player-tag ${p.seeded ? 'is-seeded' : ''}" style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee">
+                <span>${p.seeded ? '⭐ ' : ''}${p.name}</span>
+                <span onclick="removePlayer(${idx})" style="color:red; font-weight:bold; cursor:pointer">×</span>
+            </div>
+        `).join('');
+    }
+
+    window.removePlayer = (idx) => {
+        state.players.splice(idx, 1);
+        renderSetup();
+        save();
+    };
+
+    window.startTournament = () => {
+        if (state.players.length < 2) return alert("Min 2 players");
+        state.format = document.getElementById('match-format').value;
+        state.courts = parseInt(document.getElementById('courts').value);
+        
+        let seeded = state.players.filter(p => p.seeded).sort(() => Math.random() - 0.5);
+        let normal = state.players.filter(p => !p.seeded).sort(() => Math.random() - 0.5);
+        let groups = Array.from({ length: state.courts }, () => []);
+        
+        seeded.forEach((p, idx) => groups[idx % state.courts].push(p));
+        let gIdx = seeded.length % state.courts;
+        normal.forEach(p => { groups[gIdx % state.courts].push(p); gIdx++; });
+
+        state.groupMatches = [];
+        groups.forEach((gp, idx) => {
+            const gid = idx + 1;
+            gp.forEach(p => p.groupId = gid);
+            for (let a = 0; a < gp.length; a++) {
+                for (let b = a + 1; b < gp.length; b++) {
+                    state.groupMatches.push({ group: gid, p1: gp[a].name, p2: gp[b].name, s1:0, s2:0, winner: "" });
+                }
+            }
+        });
+        state.view = 'groups';
+        save();
+    };
+
+    // --- GROUPS LOGIC ---
+    window.updateM = (idx, field, val) => {
+        state.groupMatches[idx][field] = val;
+        save();
+    };
+
+    function renderGroups() {
+        const c = document.getElementById('groups-container');
+        c.innerHTML = '';
+        for (let i = 1; i <= state.courts; i++) {
+            const matches = state.groupMatches.filter(m => m.group === i);
+            const roster = state.players.filter(p => p.groupId === i);
+            if (!matches.length) continue;
+
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `<h2>Group ${i}</h2><div class="roster-box"><ul class="roster-list">` + 
+                roster.map(p => `<li class="roster-item">${p.name}${p.seeded ? ' ⭐':''}</li>`).join('') + `</ul></div>`;
+
+            matches.forEach(m => {
+                const globalIdx = state.groupMatches.indexOf(m);
+                card.innerHTML += `
+                    <div class="match-box">
+                        <div class="player-slot">${m.p1} <input type="number" value="${m.s1}" onchange="updateM(${globalIdx},'s1',this.value)"></div>
+                        <div class="player-slot">${m.p2} <input type="number" value="${m.s2}" onchange="updateM(${globalIdx},'s2',this.value)"></div>
+                        <select class="winner-select" onchange="updateM(${globalIdx},'winner',this.value)">
+                            <option value="">Winner</option>
+                            <option value="${m.p1}" ${m.winner===m.p1?'selected':''}>${m.p1}</option>
+                            <option value="${m.p2}" ${m.winner===m.p2?'selected':''}>${m.p2}</option>
+                        </select>
+                    </div>`;
+            });
+            c.appendChild(card);
+        }
+    }
+
+    function renderStandings() {
+        const container = document.getElementById('standings-tables');
+        container.innerHTML = '';
+        state.players.forEach(p => { p.wins = 0; p.ptsF = 0; p.ptsA = 0; p.diff = 0; });
+        state.groupMatches.forEach(m => {
+            const a = state.players.find(p => p.name === m.p1);
+            const b = state.players.find(p => p.name === m.p2);
+            if (a && b) {
+                const s1 = parseInt(m.s1)||0; const s2 = parseInt(m.s2)||0;
+                a.ptsF += s1; a.ptsA += s2; b.ptsF += s2; b.ptsA += s1;
+                if (m.winner === a.name) a.wins++; if (m.winner === b.name) b.wins++;
+            }
+        });
+        state.players.forEach(p => p.diff = p.ptsF - p.ptsA);
+
+        for (let i = 1; i <= state.courts; i++) {
+            const gp = state.players.filter(p => p.groupId === i).sort((a,b) => b.wins - a.wins || b.diff - a.diff);
+            let table = `<h3>Group ${i}</h3><table><tr><th>Player</th><th>W</th><th>Diff</th></tr>`;
+            gp.forEach(p => table += `<tr><td>${p.name}</td><td>${p.wins}</td><td>${p.diff > 0 ? '+' + p.diff : p.diff}</td></tr>`);
+            container.innerHTML += table + `</table><br>`;
+        }
+    }
+
+    // --- BRACKET LOGIC ---
+    window.generateBrackets = () => {
+        for(let g = 1; g <= state.courts; g++) {
+            const gp = state.players.filter(p => p.groupId === g).sort((a,b) => b.wins - a.wins || b.diff - a.diff);
+            gp.forEach((p, idx) => p.groupRank = idx + 1);
+        }
+        state.players.sort((a,b) => a.groupRank - b.groupRank || b.wins - a.wins);
+        const mid = Math.ceil(state.players.length / 2);
+        initB('top', state.players.slice(0, mid));
+        initB('bottom', state.players.slice(mid));
+        save();
+    };
+
+    function initB(t, list) {
+        const size = Math.pow(2, Math.ceil(Math.log2(list.length || 1)));
+        const r1 = [];
+        for (let i = 0; i < size / 2; i++) {
+            const p1 = list[i]?.name || "BYE";
+            const p2 = list[size-1-i]?.name || "BYE";
+            r1.push({ p1, p2, s1:0, s2:0, winner: (p1 === "BYE" ? p2 : (p2 === "BYE" ? p1 : "")) });
+        }
+        state.brackets[t] = [r1];
+    }
+
+    window.upB = (t, ri, mi, f, v) => { state.brackets[t][ri][mi][f] = v; save(); };
+
+    function renderB(t) {
+        const c = document.getElementById(t + '-bracket');
+        if (!state.brackets[t]?.length) return c.innerHTML = "<p>No bracket generated.</p>";
+        c.innerHTML = state.brackets[t].map((round, ri) => `
+            <div class="round-col"><div style="font-size:0.6rem; text-align:center; color:#94a3b8">ROUND ${ri+1}</div>
+                ${round.map((m, mi) => `<div class="match-box">
+                    <div class="player-slot">${m.p1} ${m.p1!=='BYE' ? `<input type="number" value="${m.s1}" onchange="upB('${t}',${ri},${mi},'s1',this.value)">`:''}</div>
+                    <div class="player-slot">${m.p2} ${m.p2!=='BYE' ? `<input type="number" value="${m.s2}" onchange="upB('${t}',${ri},${mi},'s2',this.value)">`:''}</div>
+                    <select class="winner-select" onchange="upB('${t}',${ri},${mi},'winner',this.value)" ${m.p1==='BYE'||m.p2==='BYE'?'disabled':''}>
+                        <option value="">Winner</option>
+                        <option value="${m.p1}" ${m.winner===m.p1?'selected':''}>${m.p1}</option>
+                        <option value="${m.p2}" ${m.winner===m.p2?'selected':''}>${m.p2}</option>
+                    </select></div>`).join('')}</div>`).join('');
+    }
+
+    window.advance = (t) => {
+        const r = state.brackets[t][state.brackets[t].length - 1];
+        if (r.length === 1) return alert("Final round reached!");
+        const nr = [];
+        for (let i = 0; i < r.length; i += 2) {
+            const w1 = r[i].winner; const w2 = r[i+1]?.winner || "BYE";
+            if (!w1 && r[i].p1 !== "BYE") return alert("Complete all matches!");
+            nr.push({ p1: w1 || "BYE", p2: w2 || "BYE", s1: 0, s2: 0, winner: (w1 === "BYE" ? w2 : (w2 === "BYE" ? w1 : "")) });
+        }
+        state.brackets[t].push(nr); save();
+    };
+
+    window.resetAll = () => { if(confirm("Wipe all data?")) { state = { view: 'setup', players: [], format: 3, courts: 2, groupMatches: [], brackets: { top: [], bottom: [] } }; save(); } };
+</script>
+</body>
+</html>
