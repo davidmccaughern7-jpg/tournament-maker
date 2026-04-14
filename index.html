@@ -13,6 +13,7 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        /* Navigation */
         nav { 
             position: fixed; bottom: 0; left: 0; width: 100%; 
             background: #fff; display: flex; border-top: 1px solid #e2e8f0; z-index: 1000; 
@@ -26,17 +27,21 @@
         .hidden { display: none; }
         h2 { margin-top: 0; font-size: 1.3rem; border-bottom: 2px solid var(--p); padding-bottom: 10px; margin-bottom: 15px; }
 
+        /* Inputs */
         input[type="text"], input[type="number"], select { font-size: 16px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; width: 100%; box-sizing: border-box; }
         button { cursor: pointer; font-size: 16px; font-weight: 600; transition: opacity 0.2s; border: none; }
         button:active { opacity: 0.7; }
 
         .player-tag { background: #fff; border: 1px solid #e2e8f0; margin-bottom: 8px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; }
-        .match-box { background: #f1f5f9; border-radius: 12px; padding: 12px; margin: 12px 0; border: 1px solid #e2e8f0; }
+        .match-box { background: #f1f5f9; border-radius: 12px; padding: 10px; margin: 12px 0; border: 1px solid #e2e8f0; }
         
-        .set-grid { display: grid; grid-template-columns: 1fr repeat(5, 38px); gap: 4px; align-items: center; margin: 6px 0; }
-        .set-input { padding: 4px !important; text-align: center; font-weight: bold; height: 32px; font-size: 14px !important; border-radius: 4px !important; }
-        .player-name-label { font-weight: bold; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        /* Grid Layout for Match Rows */
+        .match-row { display: flex; align-items: center; gap: 5px; margin: 5px 0; }
+        .p-name { flex: 1; font-weight: bold; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .set-input { width: 35px; text-align: center; padding: 5px !important; height: 32px; font-size: 14px !important; border-radius: 4px !important; }
+        .total-input { width: 45px; background: #cbd5e1; border: 2px solid #94a3b8; font-weight: 900; color: #000; }
 
+        /* Brackets */
         .bracket-scroll { display: flex; overflow-x: auto; gap: 15px; padding: 10px 0; scroll-snap-type: x mandatory; }
         .round-col { min-width: 260px; scroll-snap-align: start; }
 
@@ -47,18 +52,12 @@
         .is-seeded { background: var(--seed); border-color: #facc15; }
         #admin-lock-btn { position: fixed; top: 10px; right: 10px; z-index: 2000; background: #1e293b; color: white; padding: 8px 12px; border-radius: 20px; font-size: 0.75rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         
-        /* ADMIN LOCK CSS */
+        /* Admin Lock CSS */
         body:not(.is-admin) .admin-only { display: none !important; }
-        body:not(.is-admin) .set-input, 
-        body:not(.is-admin) select:not(.tab-btn), 
-        body:not(.is-admin) #group-logic-type,
-        body:not(.is-admin) #group-value { 
-            pointer-events: none; 
-            opacity: 0.6; 
-        }
+        body:not(.is-admin) input, body:not(.is-admin) select:not(.tab-btn) { pointer-events: none; opacity: 0.6; }
     </style>
 </head>
-<body class="">
+<body>
 
 <button id="admin-lock-btn" onclick="checkPassword()">🔓 Admin Login</button>
 
@@ -67,7 +66,7 @@
         <div class="card">
             <h2>Setup Roster</h2>
             <div style="display:flex; gap:10px; margin-bottom:12px">
-                <input type="text" id="name-input" placeholder="Player Name" enterkeyhint="done">
+                <input type="text" id="name-input" placeholder="Player Name">
                 <button onclick="addPlayer()" style="background:var(--p); color:white; border-radius:8px; padding:0 20px;">Add</button>
             </div>
             <label style="display:flex; align-items:center; gap:10px; margin-bottom:20px; font-size:0.95rem">
@@ -76,27 +75,25 @@
             <div id="setup-player-list"></div>
             
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:20px">
-                <div><label style="font-size:0.75rem; font-weight:bold">FORMAT</label>
+                <div><label style="font-size:0.7rem; font-weight:bold">FORMAT</label>
                     <select id="match-format">
                         <option value="1">BO1</option>
                         <option value="3" selected>BO3</option>
                         <option value="5">BO5</option>
                     </select>
                 </div>
-                <div><label style="font-size:0.75rem; font-weight:bold">GROUPING BY</label>
+                <div><label style="font-size:0.7rem; font-weight:bold">GROUPING</label>
                     <select id="group-logic-type" onchange="toggleGroupInputs()">
-                        <option value="courts">Number of Courts</option>
-                        <option value="max">Max Players / Group</option>
+                        <option value="courts">By Courts</option>
+                        <option value="max">By Players/Group</option>
                     </select>
                 </div>
             </div>
-
-            <div id="group-val-container" style="margin-top:15px">
-                <label id="group-label" style="font-size:0.75rem; font-weight:bold">NUMBER OF COURTS</label>
+            <div style="margin-top:15px">
+                <label id="group-label" style="font-size:0.7rem; font-weight:bold">VALUE</label>
                 <input type="number" id="group-value" value="2" inputmode="numeric">
             </div>
-
-            <button onclick="startTournament()" style="width:100%; padding:18px; background:var(--p); color:white; border-radius:12px; font-weight:bold; margin-top:20px;">Generate Tournament</button>
+            <button onclick="startTournament()" style="width:100%; padding:18px; background:var(--p); color:white; border-radius:12px; font-weight:bold; margin-top:20px;">Start Tournament</button>
         </div>
     </div>
 
@@ -107,7 +104,7 @@
     <div id="tab-brackets" class="tab-content hidden">
         <div class="card">
             <h2>Playoffs</h2>
-            <button onclick="generateBrackets()" class="admin-only" style="width:100%; padding:12px; background:var(--success); color:white; border-radius:8px; margin-bottom:20px">Generate Finals Bracket</button>
+            <button onclick="generateBrackets()" class="admin-only" style="width:100%; padding:12px; background:var(--success); color:white; border-radius:8px; margin-bottom:20px">Generate Finals</button>
             
             <div style="background:var(--p); color:white; padding:8px 12px; border-radius:6px; font-size:0.8rem; font-weight:bold">🏆 CHAMPIONSHIP</div>
             <div id="top-bracket" class="bracket-scroll"></div>
@@ -131,6 +128,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+    // --- CONFIG ---
     const ADMIN_PASSWORD = "yourpassword123"; 
     const STORAGE_KEY = "daves_tourney_admin_pw";
 
@@ -148,11 +146,10 @@
     const db = getDatabase(app);
     const tourneyRef = ref(db, 'live_tournament');
 
-    // Default State
     let state = { view: 'setup', players: [], format: 3, groupMatches: [], brackets: { top: [], bottom: [] } };
     let isAdmin = false;
 
-    // --- AUTH ---
+    // --- AUTHENTICATION ---
     function activateAdminMode() {
         isAdmin = true;
         document.body.classList.add('is-admin');
@@ -162,7 +159,7 @@
 
     window.checkPassword = () => {
         if (isAdmin) {
-            if (confirm("Log out?")) {
+            if (confirm("Log out of Admin?")) {
                 localStorage.removeItem(STORAGE_KEY);
                 location.reload();
             }
@@ -176,68 +173,51 @@
     };
 
     if (localStorage.getItem(STORAGE_KEY) === ADMIN_PASSWORD) activateAdminMode();
-
     function save() { if (isAdmin) set(tourneyRef, state); }
 
-    // --- FIREBASE SYNC ---
+    // --- SYNC ---
     onValue(tourneyRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
-            // Ensure properties exist even if database is partial
-            if (!data.players) data.players = [];
-            if (!data.groupMatches) data.groupMatches = [];
-            if (!data.brackets) data.brackets = { top: [], bottom: [] };
             state = data;
+            if (!state.brackets) state.brackets = { top: [], bottom: [] };
+            renderAll();
+        } else {
+            renderAll();
         }
-        renderAll();
     });
 
-    function renderAll() {
-        renderSetup();
-        renderGroups();
-        renderStandings();
-        renderB('top');
-        renderB('bottom');
-        applyTabStyles(state.view);
-    }
+    // --- UI HELPERS ---
+    window.clearZero = (el) => { if(el.value === '0') el.value = ''; };
+    window.restoreZero = (el) => { if(el.value === '') el.value = '0'; };
 
-    // --- LOGIC ---
     window.switchTab = (tabId) => {
         state.view = tabId;
         applyTabStyles(tabId);
-        if (isAdmin) save();
+        if(isAdmin) save();
     };
 
     function applyTabStyles(tabId) {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('hidden', c.id !== 'tab-' + tabId));
         const btns = document.querySelectorAll('.tab-btn');
-        const tabList = ['setup', 'groups', 'standings', 'brackets'];
-        btns.forEach((btn, i) => btn.classList.toggle('active', tabList[i] === tabId));
+        const labels = ['setup', 'groups', 'standings', 'brackets'];
+        btns.forEach((btn, i) => btn.classList.toggle('active', labels[i] === tabId));
     }
 
+    // --- TOURNAMENT LOGIC ---
     window.toggleGroupInputs = () => {
         const type = document.getElementById('group-logic-type').value;
         document.getElementById('group-label').innerText = type === 'courts' ? 'NUMBER OF COURTS' : 'MAX PLAYERS PER GROUP';
     };
 
     window.addPlayer = () => {
-        if (!isAdmin) return alert("Please Login as Admin to add players.");
+        if(!isAdmin) return alert("Please Login as Admin first.");
         const i = document.getElementById('name-input');
         const s = document.getElementById('seed-checkbox');
         if (!i.value.trim()) return;
-        
-        state.players.push({ 
-            name: i.value.trim(), 
-            seeded: s.checked, 
-            wins: 0, 
-            setsWon: 0, 
-            diff: 0, 
-            groupId: null 
-        });
-        
+        state.players.push({ name: i.value.trim(), seeded: s.checked, groupId: null });
         i.value = ''; s.checked = false;
-        renderSetup(); 
-        save();
+        renderSetup(); save();
     };
 
     function renderSetup() {
@@ -245,17 +225,12 @@
         l.innerHTML = (state.players || []).map((p, idx) => `
             <div class="player-tag ${p.seeded ? 'is-seeded' : ''}">
                 <span>${p.seeded ? '⭐ ' : ''}${p.name}</span>
-                <span onclick="removePlayer(${idx})" style="color:var(--danger); font-weight:bold; padding:5px 10px; cursor:pointer" class="admin-only">×</span>
+                <span onclick="removePlayer(${idx})" style="color:var(--danger); font-weight:bold; cursor:pointer" class="admin-only">×</span>
             </div>
         `).join('');
     }
 
-    window.removePlayer = (idx) => { 
-        if (!isAdmin) return;
-        state.players.splice(idx,1); 
-        renderSetup(); 
-        save(); 
-    };
+    window.removePlayer = (idx) => { if(isAdmin) { state.players.splice(idx,1); renderSetup(); save(); }};
 
     window.startTournament = () => {
         if (!isAdmin) return alert("Admin login required.");
@@ -283,7 +258,8 @@
                 for (let b = a + 1; b < gp.length; b++) {
                     state.groupMatches.push({ 
                         group: gid, p1: gp[a].name, p2: gp[b].name, 
-                        sets: [{s1:0, s2:0}, {s1:0, s2:0}, {s1:0, s2:0}, {s1:0, s2:0}, {s1:0, s2:0}] 
+                        sets: Array.from({length: state.format}, () => ({s1:0, s2:0})),
+                        total1: 0, total2: 0
                     });
                 }
             }
@@ -292,33 +268,39 @@
         save();
     };
 
-    window.updateSet = (mIdx, setIdx, field, val) => {
+    // --- MATCH UPDATES ---
+    window.updateSetVal = (mIdx, sIdx, field, val) => {
         if(!isAdmin) return;
-        state.groupMatches[mIdx].sets[setIdx][field] = parseInt(val) || 0;
+        state.groupMatches[mIdx].sets[sIdx][field] = parseInt(val) || 0;
+        save();
+    };
+
+    window.updateTotalSets = (mIdx, field, val) => {
+        if(!isAdmin) return;
+        state.groupMatches[mIdx][field] = parseInt(val) || 0;
         save();
     };
 
     function renderGroups() {
         const c = document.getElementById('groups-container');
         c.innerHTML = '';
-        if (!state.groupMatches || state.groupMatches.length === 0) {
-            c.innerHTML = "<div class='card'>No groups generated yet.</div>";
-            return;
-        }
-        const groupIds = [...new Set(state.groupMatches.map(m => m.group))];
+        if (!state.groupMatches?.length) return;
         
-        groupIds.forEach(gid => {
+        const gIds = [...new Set(state.groupMatches.map(m => m.group))].sort((a,b)=>a-b);
+        gIds.forEach(gid => {
             let html = `<div class="card"><h2>Group ${gid}</h2>`;
             state.groupMatches.filter(m => m.group === gid).forEach(m => {
-                const globalIdx = state.groupMatches.indexOf(m);
+                const gIdx = state.groupMatches.indexOf(m);
                 html += `<div class="match-box">
-                    <div class="set-grid">
-                        <span class="player-name-label">${m.p1}</span>
-                        ${m.sets.map((s, si) => `<input type="number" class="set-input" value="${s.s1}" onchange="updateSet(${globalIdx},${si},'s1',this.value)" inputmode="numeric">`).join('')}
+                    <div class="match-row">
+                        <span class="p-name">${m.p1}</span>
+                        ${m.sets.map((s, si) => `<input type="number" class="set-input" value="${s.s1}" onfocus="clearZero(this)" onblur="restoreZero(this)" onchange="updateSetVal(${gIdx},${si},'s1',this.value)" inputmode="numeric">`).join('')}
+                        <input type="number" class="set-input total-input" value="${m.total1}" onfocus="clearZero(this)" onblur="restoreZero(this)" onchange="updateTotalSets(${gIdx},'total1',this.value)" inputmode="numeric">
                     </div>
-                    <div class="set-grid">
-                        <span class="player-name-label">${m.p2}</span>
-                        ${m.sets.map((s, si) => `<input type="number" class="set-input" value="${s.s2}" onchange="updateSet(${globalIdx},${si},'s2',this.value)" inputmode="numeric">`).join('')}
+                    <div class="match-row">
+                        <span class="p-name">${m.p2}</span>
+                        ${m.sets.map((s, si) => `<input type="number" class="set-input" value="${s.s2}" onfocus="clearZero(this)" onblur="restoreZero(this)" onchange="updateSetVal(${gIdx},${si},'s2',this.value)" inputmode="numeric">`).join('')}
+                        <input type="number" class="set-input total-input" value="${m.total2}" onfocus="clearZero(this)" onblur="restoreZero(this)" onchange="updateTotalSets(${gIdx},'total2',this.value)" inputmode="numeric">
                     </div>
                 </div>`;
             });
@@ -329,66 +311,60 @@
     function renderStandings() {
         const container = document.getElementById('standings-tables');
         container.innerHTML = '';
-        if (!state.players || state.players.length === 0) return;
+        if (!state.players?.length) return;
         
-        const standingsData = state.players.map(p => ({ ...p, wins: 0, diff: 0, setsWon: 0 }));
+        const stats = state.players.map(p => ({ ...p, wins: 0, setsWon: 0, diff: 0 }));
 
-        (state.groupMatches || []).forEach(m => {
-            const p1 = standingsData.find(p => p.name === m.p1);
-            const p2 = standingsData.find(p => p.name === m.p2);
+        state.groupMatches.forEach(m => {
+            const p1 = stats.find(p => p.name === m.p1);
+            const p2 = stats.find(p => p.name === m.p2);
             if (!p1 || !p2) return;
 
-            let mSets1 = 0, mSets2 = 0;
+            p1.setsWon += (m.total1 || 0);
+            p2.setsWon += (m.total2 || 0);
+            if (m.total1 > m.total2) p1.wins++; else if (m.total2 > m.total1) p2.wins++;
+
             m.sets.forEach(s => {
-                const s1 = s.s1 || 0; const s2 = s.s2 || 0;
-                if(s1 === 0 && s2 === 0) return;
-                p1.diff += (s1 - s2); p2.diff += (s2 - s1);
-                if (s1 > s2) mSets1++; else if (s2 > s1) mSets2++;
+                p1.diff += (s.s1 - s.s2);
+                p2.diff += (s.s2 - s.s1);
             });
-            
-            p1.setsWon += mSets1; p2.setsWon += mSets2;
-            if (mSets1 > mSets2) p1.wins++; else if (mSets2 > mSets1) p2.wins++;
         });
 
-        const gIds = [...new Set(standingsData.map(p => p.groupId))].filter(id => id).sort();
+        const gIds = [...new Set(stats.map(p => p.groupId))].filter(id => id).sort((a,b)=>a-b);
         gIds.forEach(id => {
-            const gp = standingsData.filter(p => p.groupId === id)
-                .sort((a,b) => b.wins - a.wins || b.setsWon - a.setsWon || b.diff - a.diff);
-            
+            const gp = stats.filter(p => p.groupId === id).sort((a,b) => b.wins - a.wins || b.setsWon - a.setsWon || b.diff - a.diff);
             let table = `<h3>Group ${id}</h3><table><tr><th>Player</th><th>W</th><th>Sets</th><th>+/-</th></tr>`;
             gp.forEach(p => table += `<tr><td>${p.name}</td><td><b>${p.wins}</b></td><td>${p.setsWon}</td><td>${p.diff > 0 ? '+' + p.diff : p.diff}</td></tr>`);
             container.innerHTML += table + `</table><br>`;
         });
     }
 
+    // --- PLAYOFF BRACKETS ---
     window.generateBrackets = () => {
         if (!isAdmin) return;
-        const standingsData = state.players.map(p => ({ ...p, wins: 0, diff: 0, setsWon: 0 }));
-        (state.groupMatches || []).forEach(m => {
-            const p1 = standingsData.find(p => p.name === m.p1);
-            const p2 = standingsData.find(p => p.name === m.p2);
-            if (!p1 || !p2) return;
-            let mSets1 = 0, mSets2 = 0;
-            m.sets.forEach(s => {
-                p1.diff += (s.s1 - s.s2); p2.diff += (s.s2 - s.s1);
-                if (s.s1 > s.s2) mSets1++; else if (s.s2 > s.s1) mSets2++;
-            });
-            if (mSets1 > mSets2) p1.wins++; else if (mSets2 > mSets1) p2.wins++;
+        const stats = state.players.map(p => ({ ...p, wins: 0, setsWon: 0, diff: 0 }));
+        state.groupMatches.forEach(m => {
+            const p1 = stats.find(p => p.name === m.p1);
+            const p2 = stats.find(p => p.name === m.p2);
+            if (p1 && p2) {
+                p1.setsWon += m.total1; p2.setsWon += m.total2;
+                if (m.total1 > m.total2) p1.wins++; else if (m.total2 > m.total1) p2.wins++;
+                m.sets.forEach(s => { p1.diff += (s.s1-s.s2); p2.diff += (s.s2-s.s1); });
+            }
         });
 
-        const rankedPlayers = [];
-        const gIds = [...new Set(standingsData.map(p => p.groupId))].filter(id => id);
+        const gIds = [...new Set(stats.map(p => p.groupId))].filter(id => id);
+        const allRanked = [];
         gIds.forEach(id => {
-            const gp = standingsData.filter(p => p.groupId === id)
-                .sort((a,b) => b.wins - a.wins || b.setsWon - a.setsWon || b.diff - a.diff);
-            gp.forEach((p, idx) => p.tempRank = idx + 1);
-            rankedPlayers.push(...gp);
+            const gp = stats.filter(p => p.groupId === id).sort((a,b) => b.wins - a.wins || b.setsWon - a.setsWon || b.diff - a.diff);
+            gp.forEach((p, i) => p.tempRank = i + 1);
+            allRanked.push(...gp);
         });
 
-        rankedPlayers.sort((a,b) => a.tempRank - b.tempRank || b.wins - a.wins);
-        const mid = Math.ceil(rankedPlayers.length / 2);
-        initB('top', rankedPlayers.slice(0, mid));
-        initB('bottom', rankedPlayers.slice(mid));
+        allRanked.sort((a,b) => a.tempRank - b.tempRank || b.wins - a.wins);
+        const mid = Math.ceil(allRanked.length / 2);
+        initB('top', allRanked.slice(0, mid));
+        initB('bottom', allRanked.slice(mid));
         state.view = 'brackets';
         save();
     };
@@ -412,17 +388,17 @@
 
     function renderB(t) {
         const c = document.getElementById(t + '-bracket');
-        if (!state.brackets?.[t]?.length) return c.innerHTML = "<p style='font-size:0.75rem; color:#94a3b8; padding:10px;'>No bracket yet.</p>";
+        if (!state.brackets?.[t]?.length) return c.innerHTML = "<p style='font-size:0.75rem; color:#94a3b8; padding:10px;'>Not generated.</p>";
         
         c.innerHTML = state.brackets[t].map((round, ri) => `
             <div class="round-col">
                 <div style="font-size:0.65rem; text-align:center; color:#94a3b8; font-weight:bold; margin-bottom:5px;">ROUND ${ri+1}</div>
                 ${round.map((m, mi) => `<div class="match-box" style="padding:10px;">
                     <div class="player-slot" style="font-size:0.85rem; display:flex; justify-content:space-between; margin-bottom:5px;">
-                        <span>${m.p1}</span> ${m.p1!=='BYE' ? `<input type="number" style="width:40px; padding:2px;" value="${m.s1}" onchange="upB('${t}',${ri},${mi},'s1',this.value)" class="admin-only">`:''}
+                        <span>${m.p1}</span> ${m.p1!=='BYE' ? `<input type="number" style="width:40px; padding:2px;" value="${m.s1}" onchange="upB('${t}',${ri},${mi},'s1',this.value)">`:''}
                     </div>
                     <div class="player-slot" style="font-size:0.85rem; display:flex; justify-content:space-between; margin-bottom:8px;">
-                        <span>${m.p2}</span> ${m.p2!=='BYE' ? `<input type="number" style="width:40px; padding:2px;" value="${m.s2}" onchange="upB('${t}',${ri},${mi},'s2',this.value)" class="admin-only">`:''}
+                        <span>${m.p2}</span> ${m.p2!=='BYE' ? `<input type="number" style="width:40px; padding:2px;" value="${m.s2}" onchange="upB('${t}',${ri},${mi},'s2',this.value)">`:''}
                     </div>
                     <select onchange="upB('${t}',${ri},${mi},'winner',this.value)" style="font-size:0.7rem; padding:4px;" class="admin-only">
                         <option value="">Winner</option>
@@ -430,7 +406,7 @@
                         <option value="${m.p2}" ${m.winner===m.p2?'selected':''}>${m.p2}</option>
                     </select>
                 </div>`).join('')}
-                ${isAdmin && round.length > 1 ? `<button onclick="advance('${t}')" style="width:100%; font-size:0.7rem; background:var(--p); color:white; padding:5px; border-radius:4px;">Next Round</button>` : ''}
+                ${isAdmin && round.length > 1 ? `<button onclick="advance('${t}')" style="width:100%; font-size:0.7rem; background:var(--p); color:white; padding:5px; border-radius:4px; margin-top:5px;">Next Round</button>` : ''}
             </div>`).join('');
     }
 
@@ -446,13 +422,21 @@
     };
 
     window.resetAll = () => { 
-        if(isAdmin && confirm("Reset everything?")) { 
+        if(isAdmin && confirm("Clear all data and players?")) { 
             state = { view: 'setup', players: [], format: 3, groupMatches: [], brackets: { top: [], bottom: [] } }; 
             save(); 
         } 
     };
 
-    // Force initial render
+    function renderAll() {
+        renderSetup();
+        renderGroups();
+        renderStandings();
+        renderB('top');
+        renderB('bottom');
+        applyTabStyles(state.view);
+    }
+
     renderAll();
 </script>
 </body>
