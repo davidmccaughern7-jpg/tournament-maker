@@ -83,6 +83,15 @@
                 break-after: avoid;
             }
         }
+        /* Read-only (viewer) mode */
+        body.viewer-mode .organizer-only { display: none !important; }
+        body.viewer-mode #groups-container button[onclick^="declareQuickWinner"],
+        body.viewer-mode #bracket-view-championship button[onclick^="declareBracketQuickWinner"],
+        body.viewer-mode #bracket-view-consolation button[onclick^="declareBracketQuickWinner"] { pointer-events: none; cursor: default; }
+        body.viewer-mode #groups-container button[onclick^="saveMatchScore"],
+        body.viewer-mode button[onclick^="submitBracketMatchScore"],
+        body.viewer-mode #brackets-generator-footer { display: none !important; }
+        body.viewer-mode main input { pointer-events: none; opacity: 0.9; }
         /* Hidden by default in UI, visible in print */
         #print-area {
             display: none;
@@ -106,7 +115,7 @@
                 </div>
 
                 <!-- Multi-Tournament Switcher -->
-                <div class="flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+                <div class="organizer-only flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
                     <button onclick="switchTournamentSlot(0)" id="slot-btn-0" class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-150">
                         Tournament A
                     </button>
@@ -123,8 +132,17 @@
             </div>
 
             <!-- Main Tab Switcher Navigation -->
+            <div class="flex flex-wrap items-center gap-3 self-start lg:self-auto">
+            <button id="share-btn" onclick="openShareModal()" class="organizer-only flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 transition">
+                <span id="share-dot" class="h-2 w-2 rounded-full bg-slate-500"></span>
+                <i class="fa-solid fa-share-nodes text-xs"></i> Share Live
+            </button>
+            <div id="viewer-badge" class="hidden items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl border border-slate-800 bg-slate-950 text-slate-300">
+                <span id="viewer-dot" class="h-2 w-2 rounded-full bg-slate-500"></span>
+                <span id="viewer-status">Connecting…</span>
+            </div>
             <nav class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 self-start lg:self-auto">
-                <button onclick="switchTab('setup')" id="tab-btn-setup" class="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 bg-brand-600 text-white shadow-md shadow-brand-600/10">
+                <button onclick="switchTab('setup')" id="tab-btn-setup" class="organizer-only flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 bg-brand-600 text-white shadow-md shadow-brand-600/10">
                     <i class="fa-solid fa-sliders text-xs"></i> Setup
                 </button>
                 <button onclick="switchTab('groups')" id="tab-btn-groups" class="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-500 hover:text-slate-300 ml-1 cursor-not-allowed" disabled>
@@ -134,11 +152,21 @@
                     <i class="fa-solid fa-diagram-project text-xs"></i> Brackets
                 </button>
             </nav>
+            </div>
         </div>
     </header>
 
     <!-- Main Content View -->
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 sm:px-6">
+
+        <!-- Viewer-only status message (not started / closed / not found) -->
+        <section id="viewer-message" class="hidden">
+            <div class="bg-slate-900 rounded-2xl border border-slate-800 p-10 text-center space-y-3">
+                <i class="fa-solid fa-hourglass-half text-3xl text-brand-400"></i>
+                <h2 id="viewer-message-title" class="text-xl font-bold"></h2>
+                <p id="viewer-message-text" class="text-sm text-slate-400"></p>
+            </div>
+        </section>
 
         <!-- TAB 1: SETUP PANEL -->
         <section id="tab-setup" class="space-y-6">
@@ -278,13 +306,13 @@
                     <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
                         Format: <span id="group-format-badge" class="text-brand-400">BO1</span>
                     </span>
-                    <button onclick="openAddLatecomerModal()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-3 py-1.5 rounded-lg border border-emerald-500 transition flex items-center gap-1.5 shadow-md shadow-emerald-600/15">
+                    <button onclick="openAddLatecomerModal()" class="organizer-only text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-3 py-1.5 rounded-lg border border-emerald-500 transition flex items-center gap-1.5 shadow-md shadow-emerald-600/15">
                         <i class="fa-solid fa-user-plus"></i> Add Late Player
                     </button>
-                    <button onclick="printGroupSheets()" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-1.5 rounded-lg border border-indigo-500 transition flex items-center gap-1.5 shadow-md shadow-indigo-600/15">
+                    <button onclick="printGroupSheets()" class="organizer-only text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-1.5 rounded-lg border border-indigo-500 transition flex items-center gap-1.5 shadow-md shadow-indigo-600/15">
                         <i class="fa-solid fa-print"></i> Print Group Sheets
                     </button>
-                    <button onclick="openRegenerateGroupsModal()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-3 py-1.5 rounded-lg border border-slate-700 transition">
+                    <button onclick="openRegenerateGroupsModal()" class="organizer-only text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-3 py-1.5 rounded-lg border border-slate-700 transition">
                         <i class="fa-solid fa-rotate mr-1"></i> Remake Groups
                     </button>
                 </div>
@@ -331,7 +359,7 @@
                 </div>
                 <!-- Controls and Switcher -->
                 <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                    <button onclick="printPlayoffSheets()" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-1.5 rounded-lg border border-indigo-500 transition flex items-center gap-1.5 shadow-md shadow-indigo-600/15">
+                    <button onclick="printPlayoffSheets()" class="organizer-only text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-1.5 rounded-lg border border-indigo-500 transition flex items-center gap-1.5 shadow-md shadow-indigo-600/15">
                         <i class="fa-solid fa-print"></i> Print Prefilled Playoff Sheets
                     </button>
                     <!-- Sub-bracket Switcher -->
@@ -493,8 +521,202 @@
         // Local Storage Key
         const STORAGE_KEY = 'versus_tournament_planner_save';
 
+        // ============ LIVE SHARING (Firebase Realtime Database over plain REST) ============
+        // Optional: hardcode your database URL here, e.g. 'https://my-project-default-rtdb.firebaseio.com'
+        // If left empty, the Share Live dialog lets you paste it and it is remembered in this browser.
+        const FIREBASE_DB_URL = '';
+        const DB_URL_KEY = 'versus_live_db_url';
+
+        const queryParams = new URLSearchParams(window.location.search);
+        const VIEW_ID = queryParams.get('view');
+        const IS_VIEWER = !!VIEW_ID;
+
+        function normalizeDbUrl(u) {
+            u = (u || '').trim();
+            if (!u) return '';
+            if (!/^https:\/\//i.test(u)) u = 'https://' + u;
+            return u.replace(/\/+$/, '');
+        }
+        function getDbUrl() {
+            if (FIREBASE_DB_URL) return normalizeDbUrl(FIREBASE_DB_URL);
+            const fromLink = queryParams.get('db');
+            if (IS_VIEWER && fromLink) return normalizeDbUrl(fromLink);
+            try { return normalizeDbUrl(localStorage.getItem(DB_URL_KEY)); } catch (e) { return ''; }
+        }
+        function randomHex(bytes) {
+            const arr = new Uint8Array(bytes);
+            crypto.getRandomValues(arr);
+            return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // Organizer side: push the active tournament to the cloud whenever it is saved
+        let pushTimer = null;
+        let pushInFlight = false;
+        let pushPending = false;
+        let lastPushedJson = {};
+        let pushStatus = { ok: null, at: null, error: null };
+
+        function buildSharePayload(slot) {
+            const copy = JSON.parse(JSON.stringify(slot));
+            delete copy.live;
+            delete copy.currentTab;
+            delete copy.subBracketType;
+            return JSON.stringify(copy);
+        }
+
+        function schedulePush() {
+            if (IS_VIEWER) return;
+            clearTimeout(pushTimer);
+            pushTimer = setTimeout(pushNow, 500);
+        }
+
+        async function pushNow(force = false, overrideJson = null) {
+            if (IS_VIEWER) return;
+            const slot = AppState.list[AppState.activeId];
+            const live = slot.live;
+            const db = getDbUrl();
+            if (!live || !db) return;
+            if (pushInFlight) { pushPending = true; return; }
+
+            const json = overrideJson !== null ? overrideJson : buildSharePayload(slot);
+            if (!force && lastPushedJson[live.id] === json) return;
+
+            pushInFlight = true;
+            try {
+                const res = await fetch(`${db}/live/${live.id}.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: live.key, data: json, updatedAt: Date.now() })
+                });
+                if (!res.ok) throw new Error(res.status === 401 || res.status === 403 ? 'Permission denied - check your database rules' : `HTTP ${res.status}`);
+                lastPushedJson[live.id] = json;
+                pushStatus = { ok: true, at: new Date(), error: null };
+            } catch (err) {
+                pushStatus = { ok: false, at: new Date(), error: err.message || String(err) };
+            } finally {
+                pushInFlight = false;
+                updateShareIndicators();
+                if (pushPending) { pushPending = false; schedulePush(); }
+            }
+        }
+
+        function updateShareIndicators() {
+            const dot = document.getElementById('share-dot');
+            if (dot) {
+                const live = AppState.list[AppState.activeId].live;
+                dot.className = 'h-2 w-2 rounded-full ' + (!live ? 'bg-slate-500' : (pushStatus.ok === false ? 'bg-red-500' : 'bg-emerald-400'));
+            }
+            const st = document.getElementById('share-status');
+            if (st) {
+                if (pushStatus.ok === false) st.innerHTML = `<span class="text-red-400">Sync problem: ${pushStatus.error}</span>`;
+                else if (pushStatus.at) st.innerHTML = `<span class="text-emerald-400">Synced at ${pushStatus.at.toLocaleTimeString()}</span>`;
+                else st.textContent = 'Waiting for first sync…';
+            }
+        }
+
+        // Viewer side: stream the shared tournament and render it read-only
+        let viewerSource = null;
+        let viewerStarted = false;
+
+        function setViewerConnection(ok, text) {
+            const badge = document.getElementById('viewer-badge');
+            badge.classList.remove('hidden');
+            badge.classList.add('flex');
+            document.getElementById('viewer-dot').className = 'h-2 w-2 rounded-full ' + (ok ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400');
+            document.getElementById('viewer-status').textContent = text;
+        }
+
+        function showViewerMessage(title, text) {
+            ['tab-setup', 'tab-groups', 'tab-brackets'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById('viewer-message-title').textContent = title;
+            document.getElementById('viewer-message-text').textContent = text;
+            document.getElementById('viewer-message').classList.remove('hidden');
+        }
+
+        function applyRemote(str) {
+            if (str === null || str === undefined) {
+                showViewerMessage('Tournament not found', 'This link is not valid, or the organizer has not started sharing yet.');
+                return;
+            }
+            let data;
+            try { data = JSON.parse(str); } catch (e) { return; }
+            if (data.closed) {
+                showViewerMessage('Sharing has ended', 'The organizer has stopped sharing this tournament.');
+                return;
+            }
+
+            const old = AppState.list[0];
+            const prevTab = viewerStarted ? old.currentTab : null;
+            const prevSub = viewerStarted ? old.subBracketType : null;
+            viewerStarted = true;
+
+            data.id = 0;
+            data.players = data.players || [];
+            data.groups = data.groups || [];
+            data.brackets = data.brackets || { championship: null, consolation: null };
+            AppState.list[0] = data;
+            AppState.activeId = 0;
+
+            const hasG = data.groups.length > 0;
+            const hasB = !!(data.brackets.championship && data.brackets.consolation);
+            let tab = prevTab;
+            if (!tab || tab === 'setup' || (tab === 'groups' && !hasG) || (tab === 'brackets' && !hasB)) {
+                tab = hasB ? 'brackets' : (hasG ? 'groups' : null);
+            }
+            data.currentTab = tab || 'setup';
+            data.subBracketType = prevSub || 'championship';
+
+            document.getElementById('viewer-message').classList.add('hidden');
+            document.title = (data.name || 'Tournament') + ' - Live';
+
+            if (!tab) {
+                showViewerMessage(data.name || 'Tournament', 'The organizer has not launched the tournament yet. This page will update automatically.');
+                return;
+            }
+            refreshActiveTournamentUI();
+            if (tab === 'brackets') switchBracketType(data.subBracketType);
+            lockViewerInputs();
+            setViewerConnection(true, 'Live · updated ' + new Date().toLocaleTimeString());
+        }
+
+        function lockViewerInputs() {
+            document.querySelectorAll('main input, main textarea').forEach(el => { el.disabled = true; });
+        }
+
+        function startViewer() {
+            const db = getDbUrl();
+            document.body.classList.add('viewer-mode');
+            // Disable every organizer action as a second line of defence
+            ['switchTournamentSlot','openRenameTournamentModal','confirmRenameTournament','addSinglePlayer','addBulkPlayers',
+             'removePlayer','toggleSeed','clearAllPlayers','generateSamplePlayers','adjustGroupCount','launchTournament',
+             'openAddLatecomerModal','confirmAddLatecomer','openRegenerateGroupsModal','declareQuickWinner','saveMatchScore',
+             'generateBrackets','declareBracketQuickWinner','submitBracketMatchScore','restartTournament',
+             'printGroupSheets','printPlayoffSheets','openShareModal'
+            ].forEach(n => { window[n] = function() {}; });
+
+            if (!db) {
+                showViewerMessage('Link incomplete', 'This link is missing the database address. Ask the organizer for a fresh share link.');
+                return;
+            }
+            setViewerConnection(false, 'Connecting…');
+            const url = `${db}/live/${encodeURIComponent(VIEW_ID)}/data.json`;
+            viewerSource = new EventSource(url);
+            viewerSource.addEventListener('put', (ev) => {
+                try {
+                    const msg = JSON.parse(ev.data);
+                    if (msg.path === '/') applyRemote(msg.data);
+                } catch (e) { /* ignore malformed event */ }
+            });
+            viewerSource.onopen = () => setViewerConnection(true, 'Live');
+            viewerSource.onerror = () => setViewerConnection(false, 'Reconnecting…');
+            // New DOM from renders should stay locked
+            new MutationObserver(lockViewerInputs).observe(document.querySelector('main'), { childList: true, subtree: true });
+        }
+
         // Save State to browser's Local Storage
         function saveToLocalStorage() {
+            if (IS_VIEWER) return; // viewers never write anything
+            schedulePush();
             try {
                 const payload = {
                     activeId: AppState.activeId,
@@ -522,10 +744,134 @@
             }
         }
 
+
+        // ================= SHARE LIVE MODAL (organizer) =================
+        const FIREBASE_RULES = `{
+  "rules": {
+    "live": {
+      "$id": {
+        ".write": "!data.child('key').exists() || data.child('key').val() === newData.child('key').val()",
+        ".validate": "newData.hasChildren(['key','data'])",
+        "key": { ".validate": "newData.isString() && newData.val().length >= 16 && newData.val().length <= 64" },
+        "data": { ".read": true, ".validate": "newData.isString() && newData.val().length < 5000000" },
+        "updatedAt": { ".read": true, ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}`;
+
+        function buildViewerLink(live) {
+            const base = window.location.origin + window.location.pathname;
+            let link = `${base}?view=${live.id}`;
+            if (!FIREBASE_DB_URL) link += `&db=${encodeURIComponent(getDbUrl())}`;
+            return link;
+        }
+
+        function openShareModal() {
+            const slot = AppState.list[AppState.activeId];
+            const db = getDbUrl();
+            const modal = document.getElementById('custom-modal');
+            document.getElementById('modal-icon-container').className = 'w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-500/10 text-emerald-400';
+            document.getElementById('modal-icon-container').innerHTML = '<i class="fa-solid fa-share-nodes"></i>';
+            document.getElementById('modal-title').textContent = 'Share Live - ' + (slot.name || 'Tournament');
+            const body = document.getElementById('modal-body');
+            const footer = document.getElementById('modal-footer');
+
+            const closeBtn = `<button onclick="closeCustomModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition">Close</button>`;
+
+            if (!db) {
+                body.innerHTML = `
+                    <div class="space-y-3 text-xs text-slate-300">
+                        <p>Live sharing needs a free Firebase Realtime Database to hold the tournament. One-time setup:</p>
+                        <ol class="list-decimal pl-4 space-y-1 text-slate-400">
+                            <li>Create a project at console.firebase.google.com</li>
+                            <li>Build → Realtime Database → Create database (start in locked mode)</li>
+                            <li>Open the Rules tab, paste the rules below, and Publish</li>
+                            <li>Copy the database URL (shown at the top of the Data tab) and paste it here</li>
+                        </ol>
+                        <details class="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                            <summary class="cursor-pointer font-semibold text-slate-200">Rules to paste</summary>
+                            <pre class="mt-2 text-[10px] leading-snug overflow-x-auto text-slate-400" id="rules-pre"></pre>
+                            <button onclick="copyText(FIREBASE_RULES, this)" class="mt-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-[11px] font-semibold text-slate-200">Copy rules</button>
+                        </details>
+                        <input id="db-url-input" type="text" placeholder="https://your-project-default-rtdb.firebaseio.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 text-slate-100">
+                    </div>`;
+                footer.innerHTML = closeBtn + `<button onclick="saveDbUrl()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs transition">Save database URL</button>`;
+            } else if (!slot.live) {
+                body.innerHTML = `
+                    <div class="space-y-3 text-xs text-slate-300">
+                        <p>Create a read-only link for <strong>${slot.name}</strong>. Anyone with the link sees the groups and brackets update live as you enter scores. They cannot edit anything.</p>
+                        <p class="text-slate-500">Only this browser holds the editing key, so keep running the tournament from here.</p>
+                    </div>`;
+                footer.innerHTML = closeBtn + `<button onclick="startSharing()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs transition">Start sharing</button>`;
+            } else {
+                const link = buildViewerLink(slot.live);
+                body.innerHTML = `
+                    <div class="space-y-3 text-xs text-slate-300">
+                        <p>Share this read-only link. It updates automatically as you make changes here.</p>
+                        <div class="flex gap-2">
+                            <input id="share-link-input" readonly value="${link}" class="flex-grow bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-100">
+                            <button onclick="copyText(document.getElementById('share-link-input').value, this)" class="px-3 bg-brand-600 hover:bg-brand-500 rounded-xl text-xs font-semibold text-white">Copy</button>
+                        </div>
+                        <div id="share-status" class="text-slate-400"></div>
+                    </div>`;
+                footer.innerHTML = closeBtn +
+                    `<button onclick="window.open(document.getElementById('share-link-input').value, '_blank')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl text-xs transition">Open</button>` +
+                    `<button onclick="stopSharing()" class="px-4 py-2 bg-red-950/40 hover:bg-red-900/40 text-red-400 border border-red-500/20 font-semibold rounded-xl text-xs transition">Stop sharing</button>`;
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => { modal.children[0].classList.remove('scale-95'); modal.children[0].classList.add('scale-100'); }, 50);
+            const pre = document.getElementById('rules-pre');
+            if (pre) pre.textContent = FIREBASE_RULES;
+            updateShareIndicators();
+        }
+
+        function copyText(text, btn) {
+            const done = () => { if (btn) { const o = btn.textContent; btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = o, 1200); } };
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, done);
+            else { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); done(); }
+        }
+
+        function saveDbUrl() {
+            const v = normalizeDbUrl(document.getElementById('db-url-input').value);
+            if (!/^https:\/\/[^\/]+\.(firebaseio\.com|firebasedatabase\.app)$/i.test(v)) {
+                showCustomAlert('Check the URL', 'It should look like https://your-project-default-rtdb.firebaseio.com (or end in firebasedatabase.app).', 'warn');
+                return;
+            }
+            try { localStorage.setItem(DB_URL_KEY, v); } catch (e) {}
+            openShareModal();
+        }
+
+        async function startSharing() {
+            const slot = AppState.list[AppState.activeId];
+            slot.live = { id: randomHex(6), key: randomHex(16) };
+            saveToLocalStorage();
+            openShareModal();
+            await pushNow(true);
+            updateShareIndicators();
+        }
+
+        async function stopSharing() {
+            const slot = AppState.list[AppState.activeId];
+            if (!slot.live) return;
+            clearTimeout(pushTimer);
+            await pushNow(true, JSON.stringify({ closed: true }));
+            delete slot.live;
+            saveToLocalStorage();
+            closeCustomModal();
+            updateShareIndicators();
+        }
+
         // Window entry point
         window.onload = function() {
+            if (IS_VIEWER) { startViewer(); return; }
             loadFromLocalStorage();
             refreshActiveTournamentUI();
+            updateShareIndicators();
+            pushNow();
         };
 
         // SWITCH SLOTS AND REFRESH UI STATE
@@ -537,6 +883,7 @@
 
         // SYNC INTERACTIVE UI WRAPPERS TO NEW PROFILE
         function refreshActiveTournamentUI() {
+            updateShareIndicators();
             // Update active state visualizer of the slots
             for (let i = 0; i < 3; i++) {
                 const btn = document.getElementById(`slot-btn-${i}`);
