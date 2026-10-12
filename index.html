@@ -84,7 +84,9 @@
             }
         }
         /* Read-only (viewer) mode */
-        body.viewer-mode .organizer-only { display: none !important; }
+        body.viewer-mode .organizer-only,
+        body.viewer-mode #tab-btn-setup,
+        body.viewer-mode #tab-setup { display: none !important; }
         body.viewer-mode #groups-container button[onclick^="declareQuickWinner"],
         body.viewer-mode #bracket-view-championship button[onclick^="declareBracketQuickWinner"],
         body.viewer-mode #bracket-view-consolation button[onclick^="declareBracketQuickWinner"] { pointer-events: none; cursor: default; }
@@ -273,6 +275,16 @@
                             </div>
                         </div>
 
+                        <!-- Group Assignment Mode -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wide">Group Assignment</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="setGroupMode('auto')" id="gm-auto" class="gm-btn py-2.5 rounded-xl border text-sm font-semibold transition bg-brand-600 border-brand-500 text-white">Automatic Draw</button>
+                                <button onclick="setGroupMode('manual')" id="gm-manual" class="gm-btn py-2.5 rounded-xl border text-sm font-semibold transition bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700">Manual</button>
+                            </div>
+                            <p id="gm-help" class="text-slate-500 text-[11px]"></p>
+                        </div>
+
                         <!-- Submit Action Box -->
                         <div class="pt-4 border-t border-slate-800/80">
                             <button onclick="launchTournament()" class="w-full bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-brand-500/20 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 text-base">
@@ -289,6 +301,9 @@
                 </div>
 
             </div>
+
+            <!-- Manual group assignment panel -->
+            <div id="manual-groups-panel" class="hidden bg-slate-900 rounded-2xl border border-slate-800 p-5 space-y-4 shadow-lg"></div>
         </section>
 
         <!-- TAB 2: GROUPS PANEL -->
@@ -515,7 +530,9 @@
             get currentTab() { return this.list[this.activeId].currentTab; },
             set currentTab(val) { this.list[this.activeId].currentTab = val; },
             get subBracketType() { return this.list[this.activeId].subBracketType; },
-            set subBracketType(val) { this.list[this.activeId].subBracketType = val; }
+            set subBracketType(val) { this.list[this.activeId].subBracketType = val; },
+            get groupMode() { return this.list[this.activeId].groupMode || 'auto'; },
+            set groupMode(val) { this.list[this.activeId].groupMode = val; }
         };
 
         // Local Storage Key
@@ -668,6 +685,8 @@
 
             document.getElementById('viewer-message').classList.add('hidden');
             document.title = (data.name || 'Tournament') + ' - Live';
+            const subtitle = document.querySelector('header p');
+            if (subtitle) subtitle.textContent = (data.name || 'Tournament').toUpperCase();
 
             if (!tab) {
                 showViewerMessage(data.name || 'Tournament', 'The organizer has not launched the tournament yet. This page will update automatically.');
@@ -691,13 +710,15 @@
              'removePlayer','toggleSeed','clearAllPlayers','generateSamplePlayers','adjustGroupCount','launchTournament',
              'openAddLatecomerModal','confirmAddLatecomer','openRegenerateGroupsModal','declareQuickWinner','saveMatchScore',
              'generateBrackets','declareBracketQuickWinner','submitBracketMatchScore','restartTournament',
-             'printGroupSheets','printPlayoffSheets','openShareModal'
+             'printGroupSheets','printPlayoffSheets','openShareModal',
+             'setGroupMode','assignPlayerToGroup','unassignPlayer','autoFillUnassigned','clearManualAssignments'
             ].forEach(n => { window[n] = function() {}; });
 
             if (!db) {
                 showViewerMessage('Link incomplete', 'This link is missing the database address. Ask the organizer for a fresh share link.');
                 return;
             }
+            showViewerMessage('Loading…', 'Fetching the latest tournament.');
             setViewerConnection(false, 'Connecting…');
             const url = `${db}/live/${encodeURIComponent(VIEW_ID)}/data.json`;
             viewerSource = new EventSource(url);
@@ -744,6 +765,149 @@
             }
         }
 
+
+        // ================= MANUAL GROUP ASSIGNMENT =================
+        function esc(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function getPlayerGroupIdx(pl) {
+            return (typeof pl.group === 'number' && pl.group >= 0 && pl.group < AppState.numGroups) ? pl.group : null;
+        }
+
+        function setGroupMode(mode) {
+            AppState.groupMode = mode;
+            saveToLocalStorage();
+            renderGroupMode();
+            validateRosterToGroupsRatio();
+        }
+
+        function assignPlayerToGroup(playerIdx, groupIdx) {
+            if (isNaN(playerIdx) || !AppState.players[playerIdx]) return;
+            AppState.players[playerIdx].group = groupIdx;
+            saveToLocalStorage();
+            renderGroupMode();
+            validateRosterToGroupsRatio();
+        }
+
+        function unassignPlayer(playerIdx) {
+            if (!AppState.players[playerIdx]) return;
+            AppState.players[playerIdx].group = null;
+            saveToLocalStorage();
+            renderGroupMode();
+            validateRosterToGroupsRatio();
+        }
+
+        function autoFillUnassigned() {
+            const counts = Array.from({ length: AppState.numGroups }, () => 0);
+            const pool = [];
+            AppState.players.forEach(pl => {
+                const g = getPlayerGroupIdx(pl);
+                if (g === null) pool.push(pl); else counts[g]++;
+            });
+            shuffle(pool).forEach(pl => {
+                let target = 0;
+                for (let i = 1; i < counts.length; i++) if (counts[i] < counts[target]) target = i;
+                pl.group = target;
+                counts[target]++;
+            });
+            saveToLocalStorage();
+            renderGroupMode();
+            validateRosterToGroupsRatio();
+        }
+
+        function clearManualAssignments() {
+            AppState.players.forEach(pl => { pl.group = null; });
+            saveToLocalStorage();
+            renderGroupMode();
+            validateRosterToGroupsRatio();
+        }
+
+        function renderGroupMode() {
+            const manual = AppState.groupMode === 'manual';
+            const autoBtn = document.getElementById('gm-auto');
+            const manualBtn = document.getElementById('gm-manual');
+            const help = document.getElementById('gm-help');
+            const panel = document.getElementById('manual-groups-panel');
+            if (!autoBtn || !panel) return;
+            const on = "gm-btn py-2.5 rounded-xl border text-sm font-semibold transition bg-brand-600 border-brand-500 text-white";
+            const off = "gm-btn py-2.5 rounded-xl border text-sm font-semibold transition bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700";
+            autoBtn.className = manual ? off : on;
+            manualBtn.className = manual ? on : off;
+            help.textContent = manual
+                ? 'You choose exactly who plays in each group using the panel below.'
+                : 'Top seeds are spread evenly across groups, then the rest are drawn at random.';
+
+            if (!manual) { panel.classList.add('hidden'); panel.innerHTML = ''; return; }
+            panel.classList.remove('hidden');
+
+            const players = AppState.players;
+            const gCount = AppState.numGroups;
+            if (players.length === 0) {
+                panel.innerHTML = `<p class="text-sm text-slate-500 text-center py-4">Add competitors first, then assign them to groups here.</p>`;
+                return;
+            }
+
+            const members = Array.from({ length: gCount }, () => []);
+            const unassigned = [];
+            players.forEach((pl, idx) => {
+                const g = getPlayerGroupIdx(pl);
+                if (g === null) unassigned.push(idx); else members[g].push(idx);
+            });
+
+            const cards = members.map((list, g) => {
+                const rows = list.map(idx => `
+                    <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+                        <span class="text-xs font-semibold text-slate-200 truncate flex items-center gap-1">
+                            ${players[idx].seeded ? '<i class="fa-solid fa-star text-amber-400 text-[9px]"></i>' : ''}${esc(players[idx].name)}
+                        </span>
+                        <button onclick="unassignPlayer(${idx})" class="text-slate-500 hover:text-red-400 transition p-1" title="Remove from group">
+                            <i class="fa-solid fa-xmark text-xs"></i>
+                        </button>
+                    </div>`).join('') || `<p class="text-[11px] text-slate-600 italic py-2 text-center">No players yet</p>`;
+
+                const options = unassigned.map(idx => `<option value="${idx}">${esc(players[idx].name)}</option>`).join('');
+                const picker = unassigned.length
+                    ? `<select onchange="assignPlayerToGroup(parseInt(this.value), ${g}); this.value='';" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
+                           <option value="">+ Add player…</option>${options}
+                       </select>`
+                    : '';
+                const tooSmall = list.length < 2;
+                return `
+                    <div class="bg-slate-950/50 border ${tooSmall ? 'border-amber-500/30' : 'border-slate-800'} rounded-xl p-3 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-sm font-bold text-slate-100">Group ${String.fromCharCode(65 + g)}</h4>
+                            <span class="text-[10px] font-semibold ${tooSmall ? 'text-amber-400' : 'text-slate-500'}">${list.length} player${list.length === 1 ? '' : 's'}</span>
+                        </div>
+                        <div class="space-y-1.5">${rows}</div>
+                        ${picker}
+                    </div>`;
+            }).join('');
+
+            const unassignedHTML = unassigned.length
+                ? unassigned.map(idx => `<span class="text-[11px] font-semibold bg-slate-800 border border-slate-700 text-slate-300 rounded-full px-2.5 py-1">${esc(players[idx].name)}</span>`).join('')
+                : `<span class="text-[11px] text-emerald-400 font-semibold"><i class="fa-solid fa-circle-check mr-1"></i>Everyone is assigned</span>`;
+
+            panel.innerHTML = `
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <h3 class="font-bold text-lg flex items-center gap-2 text-slate-100">
+                        <i class="fa-solid fa-people-group text-brand-400"></i> Manual Group Assignment
+                    </h3>
+                    <div class="flex gap-2">
+                        <button onclick="autoFillUnassigned()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2.5 py-1.5 rounded-lg border border-slate-700 transition">
+                            <i class="fa-solid fa-shuffle mr-1"></i> Randomly fill the rest
+                        </button>
+                        <button onclick="clearManualAssignments()" class="text-xs bg-red-950/40 hover:bg-red-900/40 text-red-400 font-medium px-2.5 py-1.5 rounded-lg border border-red-500/20 transition">
+                            Clear all
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-2">Unassigned (${unassigned.length})</p>
+                    <div class="flex flex-wrap gap-1.5">${unassignedHTML}</div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">${cards}</div>`;
+        }
 
         // ================= SHARE LIVE MODAL (organizer) =================
         const FIREBASE_RULES = `{
@@ -1174,6 +1338,11 @@
         }
 
         function renderRoster() {
+            renderRosterList();
+            renderGroupMode();
+        }
+
+        function renderRosterList() {
             const rosterContainer = document.getElementById('roster-list');
             const countBadge = document.getElementById('player-count-badge');
             
@@ -1226,6 +1395,7 @@
             input.value = count;
             AppState.numGroups = count;
             saveToLocalStorage();
+            renderGroupMode();
             validateRosterToGroupsRatio();
         }
 
@@ -1252,6 +1422,34 @@
                 warningEl.classList.add('hidden');
                 infoEl.textContent = "";
                 return false;
+            }
+
+            if (AppState.groupMode === 'manual') {
+                const counts = Array.from({ length: gCount }, () => 0);
+                let unassigned = 0;
+                AppState.players.forEach(pl => {
+                    const g = getPlayerGroupIdx(pl);
+                    if (g === null) unassigned++; else counts[g]++;
+                });
+                infoEl.textContent = `(${pCount - unassigned}/${pCount} assigned)`;
+                if (pCount < 4) {
+                    textEl.textContent = "A dynamic tournament system requires a minimum of 4 players to split into standard play-offs and consolation brackets.";
+                    warningEl.classList.remove('hidden');
+                    return false;
+                }
+                if (unassigned > 0) {
+                    textEl.textContent = `${unassigned} player${unassigned === 1 ? ' still needs' : 's still need'} a group. Assign everyone in the Manual Group Assignment panel below.`;
+                    warningEl.classList.remove('hidden');
+                    return false;
+                }
+                const small = counts.findIndex(c => c < 2);
+                if (small !== -1) {
+                    textEl.textContent = `Group ${String.fromCharCode(65 + small)} has fewer than 2 players. Every group needs at least 2 competitors.`;
+                    warningEl.classList.remove('hidden');
+                    return false;
+                }
+                warningEl.classList.add('hidden');
+                return true;
             }
 
             const playersPerGroup = Math.floor(pCount / gCount);
@@ -1467,26 +1665,34 @@
                 fixtures: []
             }));
 
-            // Separate seeds from unseeded players
-            const seeds = shuffle(AppState.players.filter(p => p.seeded));
-            const unseeded = shuffle(AppState.players.filter(p => !p.seeded));
+            if (AppState.groupMode === 'manual') {
+                // Manual draw: place each player exactly where the organizer put them
+                AppState.players.forEach(pl => {
+                    const g = getPlayerGroupIdx(pl);
+                    if (g !== null) AppState.groups[g].players.push(pl);
+                });
+            } else {
+                // Separate seeds from unseeded players
+                const seeds = shuffle(AppState.players.filter(p => p.seeded));
+                const unseeded = shuffle(AppState.players.filter(p => !p.seeded));
 
-            // 1. Distribute Seeds evenly across groups
-            seeds.forEach((seed, index) => {
-                const groupIdx = index % AppState.numGroups;
-                AppState.groups[groupIdx].players.push(seed);
-            });
+                // 1. Distribute Seeds evenly across groups
+                seeds.forEach((seed, index) => {
+                    const groupIdx = index % AppState.numGroups;
+                    AppState.groups[groupIdx].players.push(seed);
+                });
 
-            // 2. Distribute Unseeded players evenly across remaining empty/smaller group slots
-            unseeded.forEach((player, index) => {
-                let targetGroup = AppState.groups[0];
-                for (let i = 1; i < AppState.groups.length; i++) {
-                    if (AppState.groups[i].players.length < targetGroup.players.length) {
-                        targetGroup = AppState.groups[i];
+                // 2. Distribute Unseeded players evenly across remaining empty/smaller group slots
+                unseeded.forEach((player, index) => {
+                    let targetGroup = AppState.groups[0];
+                    for (let i = 1; i < AppState.groups.length; i++) {
+                        if (AppState.groups[i].players.length < targetGroup.players.length) {
+                            targetGroup = AppState.groups[i];
+                        }
                     }
-                }
-                targetGroup.players.push(player);
-            });
+                    targetGroup.players.push(player);
+                });
+            }
 
             // Generate beautifully balanced, spaced-out Round Robin matches per group
             AppState.groups.forEach(group => {
@@ -1522,7 +1728,10 @@
         }
 
         function openRegenerateGroupsModal() {
-            showCustomAlert("Remake Groups?", "This will reset all registered scores and reshuffle all competitor placements. Continue?", "warn", () => {
+            const manual = AppState.groupMode === 'manual';
+            showCustomAlert("Remake Groups?", manual
+                ? "This will reset all registered scores and rebuild the groups from your manual assignments. Continue?"
+                : "This will reset all registered scores and reshuffle all competitor placements. Continue?", "warn", () => {
                 launchTournament();
             });
         }
@@ -2120,6 +2329,93 @@
         }
 
         // Render elimination trees
+        // ---- Bracket rendering (desktop tree + mobile round-by-round view) ----
+        const mobileBracketMQ = window.matchMedia('(max-width: 767px)');
+        let mobileRoundSel = { championship: null, consolation: null };
+        (function() {
+            const onChange = () => { if (AppState.currentTab === 'brackets') renderBrackets(); };
+            if (mobileBracketMQ.addEventListener) mobileBracketMQ.addEventListener('change', onChange);
+            else if (mobileBracketMQ.addListener) mobileBracketMQ.addListener(onChange);
+        })();
+
+        function bracketRoundTitle(round) {
+            if (round.length === 1) return "Championship Match";
+            if (round.length === 2) return "Semifinals";
+            if (round.length === 4) return "Quarterfinals";
+            return `Round of ${round.length * 2}`;
+        }
+        function bracketRoundShort(round) {
+            if (round.length === 1) return "Final";
+            if (round.length === 2) return "Semis";
+            if (round.length === 4) return "Quarters";
+            return `R${round.length * 2}`;
+        }
+
+        function setMobileRound(type, idx) {
+            mobileRoundSel[type] = idx;
+            renderBrackets();
+        }
+
+        function buildBracketMatchCard(type, rounds, roundIdx, matchIdx, mobile) {
+            const match = rounds[roundIdx][matchIdx];
+            const hasP1 = match.p1 !== null;
+            const hasP2 = match.p2 !== null;
+            const p1Name = hasP1 ? esc(match.p1) : `<span class="text-slate-600 font-medium italic">TBD</span>`;
+            const p2Name = hasP2 ? esc(match.p2) : `<span class="text-slate-600 font-medium italic">TBD</span>`;
+            const score1Val = match.score1 !== null ? match.score1 : '';
+            const score2Val = match.score2 !== null ? match.score2 : '';
+            const p1Win = match.completed && match.score1 > match.score2;
+            const p2Win = match.completed && match.score2 > match.score1;
+            const p1Highlight = p1Win ? 'text-emerald-400 font-extrabold' : 'text-slate-300';
+            const p2Highlight = p2Win ? 'text-emerald-400 font-extrabold' : 'text-slate-300';
+            const isBye = (match.p1 && !match.p2 && match.completed) || (!match.p1 && match.p2 && match.completed);
+            const nameMax = mobile ? 'max-w-[200px]' : 'max-w-[100px]';
+            const inputCls = mobile ? 'w-11 h-8 text-sm' : 'w-8 h-6 text-xs';
+            const rowPad = mobile ? 'py-2 px-3' : 'py-1.5 px-3';
+            const disabledAttr = (!hasP1 || !hasP2) ? 'disabled' : '';
+
+            let cardBody;
+            if (isBye) {
+                const byeWinner = esc(match.p1 || match.p2);
+                cardBody = `
+                    <div class="px-3 py-2.5 flex items-center justify-between">
+                        <span class="text-xs text-slate-400 font-semibold truncate ${nameMax}">${byeWinner}</span>
+                        <span class="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 uppercase tracking-wider">BYE Adv</span>
+                    </div>`;
+            } else {
+                const row = (num, name, highlight, win, scoreVal, border) => `
+                    <div class="flex items-center justify-between ${rowPad} ${border ? 'border-b border-slate-800/50' : ''} ${win ? 'bg-emerald-500/[0.04]' : ''}">
+                        <button onclick="declareBracketQuickWinner('${type}', ${roundIdx}, ${matchIdx}, ${num})" class="group/p flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-amber-400 cursor-pointer text-left" title="Click for quick win" ${disabledAttr}>
+                            <i class="fa-solid fa-crown text-[9px] text-slate-700 group-hover/p:text-amber-400 transition ${win ? 'text-amber-400 opacity-100' : 'opacity-40'}"></i>
+                            <span class="truncate ${nameMax} ${highlight}">${name}</span>
+                        </button>
+                        <input type="number" id="b-input-${type}-${roundIdx}-${matchIdx}-p${num}" value="${scoreVal}" placeholder="0" class="${inputCls} text-center bg-slate-950 border border-slate-800 focus:border-brand-500 focus:outline-none rounded font-bold" ${disabledAttr}>
+                    </div>`;
+                cardBody = row(1, p1Name, p1Highlight, p1Win, score1Val, true) + row(2, p2Name, p2Highlight, p2Win, score2Val, false);
+            }
+
+            let advanceNote = '';
+            if (mobile && roundIdx + 1 < rounds.length && typeof match.nextMatchId === 'number') {
+                advanceNote = `<div class="px-3 py-1.5 border-t border-slate-800/60 text-[10px] text-slate-500 flex items-center gap-1"><i class="fa-solid fa-arrow-right text-[8px]"></i> Winner to ${bracketRoundShort(rounds[roundIdx + 1])} · Match ${match.nextMatchId + 1}</div>`;
+            }
+
+            const cardBorderColor = match.completed ? "border-slate-800 bg-slate-900" : "border-slate-800 bg-slate-900/60";
+            return `
+                <div class="relative flex flex-col justify-center">
+                    <div class="border ${cardBorderColor} rounded-xl shadow-md overflow-hidden hover:border-slate-700 transition duration-150 z-10">
+                        <div class="bg-slate-950 px-3 py-1 border-b border-slate-850 flex items-center justify-between">
+                            <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Match ${matchIdx + 1}</span>
+                            ${hasP1 && hasP2 && !isBye ? `
+                                <button onclick="submitBracketMatchScore('${type}', ${roundIdx}, ${matchIdx})" class="text-[10px] font-bold text-brand-400 hover:text-brand-300 uppercase transition flex items-center gap-0.5">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i> Save
+                                </button>` : ''}
+                        </div>
+                        ${cardBody}
+                        ${advanceNote}
+                    </div>
+                </div>`;
+        }
+
         function renderBrackets() {
             const type = AppState.subBracketType;
             const viewContainer = document.getElementById(`bracket-view-${type}`);
@@ -2130,102 +2426,55 @@
                 return;
             }
 
-            let columnsHTML = '';
-
-            rounds.forEach((round, roundIdx) => {
-                let roundTitle = `Round of ${round.length * 2}`;
-                if (round.length === 4) roundTitle = "Quarterfinals";
-                if (round.length === 2) roundTitle = "Semifinals";
-                if (round.length === 1) roundTitle = "Championship Match";
-
-                const matchesHTML = round.map((match, matchIdx) => {
-                    const hasP1 = match.p1 !== null;
-                    const hasP2 = match.p2 !== null;
-
-                    const p1Name = hasP1 ? match.p1 : `<span class="text-slate-600 font-medium italic">TBD</span>`;
-                    const p2Name = hasP2 ? match.p2 : `<span class="text-slate-600 font-medium italic">TBD</span>`;
-
-                    const score1Val = match.score1 !== null ? match.score1 : '';
-                    const score2Val = match.score2 !== null ? match.score2 : '';
-
-                    const p1Highlight = match.completed && match.score1 > match.score2 ? 'text-emerald-400 font-extrabold' : 'text-slate-300';
-                    const p2Highlight = match.completed && match.score2 > match.score1 ? 'text-emerald-400 font-extrabold' : 'text-slate-300';
-
-                    const isBye = (match.p1 && !match.p2 && match.completed) || (!match.p1 && match.p2 && match.completed);
-                    let cardBody = '';
-
-                    if (isBye) {
-                        const byeWinner = match.p1 || match.p2;
-                        cardBody = `
-                            <div class="bg-slate-950/40 p-3 rounded-xl border border-slate-850 flex items-center justify-between">
-                                <span class="text-xs text-slate-400 font-semibold truncate max-w-[130px]">${byeWinner}</span>
-                                <span class="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 uppercase tracking-wider">BYE Adv</span>
-                            </div>
-                        `;
-                    } else {
-                        cardBody = `
-                            <!-- Player 1 row -->
-                            <div class="flex items-center justify-between py-1.5 px-3 border-b border-slate-800/50">
-                                <button onclick="declareBracketQuickWinner('${type}', ${roundIdx}, ${matchIdx}, 1)" class="group/p flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-amber-400 cursor-pointer text-left" title="Click for quick win for ${match.p1 || 'TBD'}" ${!hasP1 || !hasP2 ? 'disabled' : ''}>
-                                    <i class="fa-solid fa-crown text-[9px] text-slate-700 group-hover/p:text-amber-400 transition ${match.completed && match.score1 > match.score2 ? 'text-amber-400 opacity-100' : 'opacity-40'}"></i>
-                                    <span class="truncate max-w-[100px] ${p1Highlight}">${p1Name}</span>
-                                </button>
-                                <input type="number" id="b-input-${type}-${roundIdx}-${matchIdx}-p1" value="${score1Val}" placeholder="0" class="w-8 h-6 text-center text-xs bg-slate-950 border border-slate-800 focus:border-brand-500 focus:outline-none rounded font-bold" ${!hasP1 || !hasP2 ? 'disabled' : ''}>
-                            </div>
-                            <!-- Player 2 row -->
-                            <div class="flex items-center justify-between py-1.5 px-3">
-                                <button onclick="declareBracketQuickWinner('${type}', ${roundIdx}, ${matchIdx}, 2)" class="group/p flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-amber-400 cursor-pointer text-left" title="Click for quick win for ${match.p2 || 'TBD'}" ${!hasP1 || !hasP2 ? 'disabled' : ''}>
-                                    <i class="fa-solid fa-crown text-[9px] text-slate-700 group-hover/p:text-amber-400 transition ${match.completed && match.score2 > match.score1 ? 'text-amber-400 opacity-100' : 'opacity-40'}"></i>
-                                    <span class="truncate max-w-[100px] ${p2Highlight}">${p2Name}</span>
-                                </button>
-                                <input type="number" id="b-input-${type}-${roundIdx}-${matchIdx}-p2" value="${score2Val}" placeholder="0" class="w-8 h-6 text-center text-xs bg-slate-950 border border-slate-800 focus:border-brand-500 focus:outline-none rounded font-bold" ${!hasP1 || !hasP2 ? 'disabled' : ''}>
-                            </div>
-                        `;
-                    }
-
-                    const cardBorderColor = match.completed ? "border-slate-800 bg-slate-900" : "border-slate-800 bg-slate-900/60";
-
-                    return `
-                        <div class="relative flex flex-col justify-center min-h-[120px]">
-                            <div class="border ${cardBorderColor} rounded-xl shadow-md overflow-hidden hover:border-slate-700 transition duration-150 z-10">
-                                <div class="bg-slate-950 px-3 py-1 border-b border-slate-850 flex items-center justify-between">
-                                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Match ${matchIdx + 1}</span>
-                                    ${hasP1 && hasP2 && !isBye ? `
-                                        <button onclick="submitBracketMatchScore('${type}', ${roundIdx}, ${matchIdx})" class="text-[9px] font-bold text-brand-400 hover:text-brand-300 uppercase transition flex items-center gap-0.5">
-                                            <i class="fa-solid fa-cloud-arrow-up"></i> Save
-                                        </button>
-                                    ` : ''}
-                                </div>
-                                ${cardBody}
-                            </div>
-                        </div>
-                    `;
+            if (mobileBracketMQ.matches) {
+                // ---- Mobile: one round at a time, stacked cards ----
+                let sel = mobileRoundSel[type];
+                if (sel === null || sel === undefined || sel >= rounds.length) {
+                    sel = rounds.findIndex(r => r.some(m => m.p1 && m.p2 && !m.completed));
+                    if (sel === -1) sel = rounds.length - 1;
+                }
+                const pills = rounds.map((round, ri) => {
+                    const done = round.filter(m => m.completed).length;
+                    const active = ri === sel;
+                    return `<button onclick="setMobileRound('${type}', ${ri})" class="flex-none px-3.5 py-2 rounded-xl border text-xs font-bold transition ${active ? 'bg-brand-600 border-brand-500 text-white' : 'bg-slate-950 border-slate-800 text-slate-400'}">
+                        ${bracketRoundShort(round)} <span class="ml-1 text-[10px] font-semibold ${active ? 'text-brand-100' : 'text-slate-600'}">${done}/${round.length}</span>
+                    </button>`;
                 }).join('');
-
-                columnsHTML += `
-                    <!-- Round Column -->
-                    <div class="flex-none w-64 flex flex-col gap-6">
-                        <div class="bg-slate-900/40 p-3 rounded-xl border border-slate-800 text-center">
-                            <h4 class="font-extrabold text-xs text-slate-300 uppercase tracking-wider">${roundTitle}</h4>
-                            <p class="text-[10px] text-slate-500 mt-0.5 font-medium">${round.length} Matches</p>
+                const cards = rounds[sel].map((_, mi) => buildBracketMatchCard(type, rounds, sel, mi, true)).join('');
+                viewContainer.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="flex gap-2 overflow-x-auto pb-1">${pills}</div>
+                        <div class="flex items-center justify-between px-1">
+                            <h4 class="font-extrabold text-sm text-slate-200 uppercase tracking-wider">${bracketRoundTitle(rounds[sel])}</h4>
+                            <span class="text-[11px] text-slate-500 font-medium">${rounds[sel].length} match${rounds[sel].length === 1 ? '' : 'es'}</span>
                         </div>
-                        <div class="flex-grow flex flex-col justify-around gap-4 min-h-[400px]">
+                        <div class="space-y-3">${cards}</div>
+                    </div>`;
+                return;
+            }
+
+            // ---- Desktop: compact bracket tree ----
+            let columnsHTML = '';
+            rounds.forEach((round, roundIdx) => {
+                const matchesHTML = round.map((_, matchIdx) => buildBracketMatchCard(type, rounds, roundIdx, matchIdx, false)).join('');
+                columnsHTML += `
+                    <div class="flex-none w-60 flex flex-col gap-4">
+                        <div class="bg-slate-900/40 p-2.5 rounded-xl border border-slate-800 text-center">
+                            <h4 class="font-extrabold text-xs text-slate-300 uppercase tracking-wider">${bracketRoundTitle(round)}</h4>
+                            <p class="text-[10px] text-slate-500 mt-0.5 font-medium">${round.length} Match${round.length === 1 ? '' : 'es'}</p>
+                        </div>
+                        <div class="flex-grow flex flex-col justify-around gap-3">
                             ${matchesHTML}
                         </div>
-                    </div>
-                `;
+                    </div>`;
             });
 
             viewContainer.innerHTML = `
-                <div class="overflow-x-auto pb-6 pt-2">
-                    <div class="flex gap-12 px-2 min-w-max">
+                <div class="overflow-x-auto pb-4 pt-2">
+                    <div class="flex gap-8 px-2 min-w-max">
                         ${columnsHTML}
                     </div>
-                </div>
-                <div class="text-center text-slate-500 text-[11px] font-medium max-w-sm mx-auto flex items-center justify-center gap-1">
-                    <i class="fa-solid fa-circle-info"></i> Tip: Use the horizontal scrollbar if the bracket overflows.
-                </div>
-            `;
+                </div>`;
         }
 
         // Victory Screen Sequence
